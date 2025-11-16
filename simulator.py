@@ -15,6 +15,9 @@ altitude = 0.0
 velocity = 0.0
 latitude = 40.7128
 longitude = -74.0060
+temperature = 20.0
+pressure = 1013.25
+battery = 12.6
 
 print(f"Roket Simülatörü Başlatıldı. {ROCKET_PORT} portuna {BAUDRATE} baud rate ile yazılıyor.")
 print("Durdurmak için Ctrl+C.")
@@ -34,16 +37,26 @@ try:
         velocity = random.uniform(45.0, 55.0)
         latitude += random.uniform(-0.0001, 0.0001)
         longitude += random.uniform(-0.0001, 0.0001)
+        temperature = random.uniform(15.0, 30.0)
+        pressure = random.uniform(1000.0, 1020.0)
+        battery -= random.uniform(0.001, 0.005)  # Batarya azalır
 
-        # Veri paketini oluştur (Basit bir CSV formatı)
-        # GCS tarafında bu formatı ayrıştırmamız gerekecek.
-        # \n (newline) karakteri önemlidir, GCS'de 'readline' bunu kullanır.
-        data_packet = f"DATA,{altitude:.2f},{velocity:.2f},{latitude:.6f},{longitude:.6f}\n"
-
-        # Veriyi port'a yaz (byte olarak encode ederek)
-        ser.write(data_packet.encode('utf-8'))
+        # Her veri tipini ayrı satırda gönder
+        data_list = [
+            f"LAT,{latitude:.6f}",
+            f"LON,{longitude:.6f}",
+            f"ALT,{altitude:.2f}",
+            f"VEL,{velocity:.2f}",
+            f"TEMP,{temperature:.1f}",
+            f"PRES,{pressure:.2f}",
+            f"BAT,{battery:.2f}"
+        ]
         
-        print(f"Gönderildi: {data_packet.strip()}")
+        for data in data_list:
+            ser.write(f"{data}\n".encode('utf-8'))
+            print(f"Gönderildi: {data}")
+        
+        print("---")
 
         # 10Hz (saniyede 10 kez) veri göndermek için 0.1 saniye bekle
         time.sleep(0.1)
