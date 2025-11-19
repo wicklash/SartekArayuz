@@ -8,7 +8,6 @@ Bu dosya uygulamayı başlatır.
 import sys
 from PyQt6.QtWidgets import QApplication
 from src.ui.main_window import MainWindow
-from src.core.serial_worker import SerialWorker
 
 # Konfigürasyon
 GCS_PORT = 'COM8'  # GCS dinleme portu
@@ -20,8 +19,8 @@ def main():
     # QApplication oluştur
     app = QApplication(sys.argv)
     
-    # Ana pencereyi oluştur
-    window = MainWindow(GCS_PORT, BAUDRATE, SerialWorker)
+    # Ana pencereyi oluştur (worker_class parametresi artık gerekmiyor)
+    window = MainWindow(GCS_PORT, BAUDRATE, None)
     window.show()
     
     # Uygulamayı çalıştır

@@ -1,2 +1,8 @@
-pyserial
-PyQt6
+# GUI Framework
+PyQt6>=6.0.0
+
+# Serial Communication
+pyserial>=3.5
+
+# Windows Registry Access (built-in, no install needed)
+# winreg - Python built-in module
