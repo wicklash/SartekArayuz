@@ -4,84 +4,158 @@
 # Ana pencere ve widget stilleri
 MAIN_WINDOW_STYLE = """
     QMainWindow {
-        background-color: #f5f5f5;
+        background-color: #1a1a1a;
+        font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QPushButton {
-        background-color: #2196F3;
-        color: white;
+        background-color: #3d3d3d;
+        color: #e0e0e0;
         border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
+        padding: 10px 18px;
+        border-radius: 4px;
         font-size: 13px;
-        font-weight: bold;
-        min-width: 120px;
+        font-weight: 600;
+        min-width: 100px;
+        letter-spacing: 0.5px;
+        font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QPushButton:hover {
-        background-color: #1976D2;
+        background-color: #4d4d4d;
     }
     QPushButton:pressed {
-        background-color: #0D47A1;
+        background-color: #2d2d2d;
     }
     QPushButton:disabled {
-        background-color: #BDBDBD;
-        color: #757575;
+        background-color: #2a2a2a;
+        color: #666666;
     }
     QLabel#section_title {
-        font-size: 14px;
-        font-weight: bold;
-        color: #424242;
-        padding: 5px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #e0e0e0;
+        padding: 8px 0px;
+        letter-spacing: 0.3px;
+        font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QLabel#port_label {
         font-size: 13px;
-        color: #616161;
-        background-color: #E3F2FD;
-        padding: 8px;
-        border-radius: 5px;
+        color: #e0e0e0;
+        background-color: #2d2d2d;
+        padding: 10px 15px;
+        border-radius: 4px;
+        border: 1px solid #3d3d3d;
+        font-weight: 500;
+        font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QFrame#data_card {
-        background-color: white;
-        border-radius: 8px;
-        border: 1px solid #E0E0E0;
+        background-color: #2d2d2d;
+        border-radius: 6px;
+        border: 1px solid #3d3d3d;
+        font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QLabel#data_title {
-        font-size: 12px;
-        font-weight: bold;
-        color: #757575;
-        padding: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #ffffff;
+        padding: 2px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QLabel#data_value {
-        font-size: 16px;
-        font-weight: bold;
-        color: #212121;
-        padding: 5px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #00ff00;
+        padding: 2px;
+        font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
 """
 
 # Özel buton stilleri
 BUTTON_STYLES = {
-    'connect': "QPushButton { background-color: #4CAF50; } QPushButton:hover { background-color: #388E3C; }",
-    'disconnect': "QPushButton { background-color: #FF9800; } QPushButton:hover { background-color: #F57C00; }",
-    'stop': "QPushButton { background-color: #F44336; } QPushButton:hover { background-color: #D32F2F; }"
+    'start': """
+        QPushButton { 
+            background-color: #4caf50; 
+            color: white; 
+        } 
+        QPushButton:hover { 
+            background-color: #66bb6a; 
+        } 
+        QPushButton:pressed { 
+            background-color: #81c784; 
+        }
+        QPushButton:disabled {
+            background-color: #2d5f2f;
+            color: #a0a0a0;
+        }
+    """,
+    'stop': """
+        QPushButton { 
+            background-color: #f44336; 
+            color: white; 
+        } 
+        QPushButton:hover { 
+            background-color: #ef5350; 
+        } 
+        QPushButton:pressed { 
+            background-color: #e57373; 
+        }
+        QPushButton:disabled {
+            background-color: #6d2923;
+            color: #a0a0a0;
+        }
+    """,
+    'connect': """
+        QPushButton { 
+            background-color: #4caf50; 
+            color: white; 
+        } 
+        QPushButton:hover { 
+            background-color: #66bb6a; 
+        } 
+        QPushButton:pressed { 
+            background-color: #81c784; 
+        }
+        QPushButton:disabled {
+            background-color: #2d5f2f;
+            color: #a0a0a0;
+        }
+    """,
+    'disconnect': """
+        QPushButton { 
+            background-color: #f44336; 
+            color: white; 
+        } 
+        QPushButton:hover { 
+            background-color: #ef5350; 
+        } 
+        QPushButton:pressed { 
+            background-color: #e57373; 
+        }
+        QPushButton:disabled {
+            background-color: #6d2923;
+            color: #a0a0a0;
+        }
+    """
 }
 
 # Renk paleti
 COLORS = {
-    'primary': '#2196F3',
-    'primary_dark': '#1976D2',
-    'primary_pressed': '#0D47A1',
-    'success': '#4CAF50',
-    'success_dark': '#388E3C',
-    'warning': '#FF9800',
-    'warning_dark': '#F57C00',
-    'danger': '#F44336',
-    'danger_dark': '#D32F2F',
-    'background': '#f5f5f5',
-    'card_background': 'white',
-    'text_primary': '#212121',
-    'text_secondary': '#757575',
-    'text_hint': '#424242',
-    'border': '#E0E0E0',
-    'info_background': '#E3F2FD',
-    'info_text': '#616161'
+    'primary': '#1a1a1a',
+    'secondary': '#2d2d2d',
+    'tertiary': '#3d3d3d',
+    'hover': '#4d4d4d',
+    'accent_green': '#4caf50',
+    'accent_green_light': '#66bb6a',
+    'accent_green_dark': '#388e3c',
+    'accent_red': '#f44336',
+    'accent_red_light': '#ef5350',
+    'accent_red_dark': '#d32f2f',
+    'value_green': '#00ff00',
+    'text_primary': '#e0e0e0',
+    'text_secondary': '#999999',
+    'text_disabled': '#666666',
+    'border': '#3d3d3d',
+    'background_dark': '#1a1a1a',
+    'surface': '#2d2d2d'
 }

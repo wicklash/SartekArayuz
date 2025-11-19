@@ -14,6 +14,7 @@ class TelemetryGridWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.data_labels = {}  # Veri label'larını saklar
+        self.setMaximumHeight(450)  # Maksimum yükseklik 450px
         self._setup_ui()
     
     def _setup_ui(self):
@@ -23,7 +24,7 @@ class TelemetryGridWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         
         # Başlık
-        self.section_label = QLabel("📊 Telemetri Verileri")
+        self.section_label = QLabel("Telemetri Verileri")
         self.section_label.setObjectName("section_title")
         
         # Grid layout
@@ -40,43 +41,20 @@ class TelemetryGridWidget(QWidget):
         """Tüm veri kartlarını oluşturur."""
         row = 0
         
-        # Satır 1: Kimlik ve Paket
-        self._add_card("🏷️ Takım ID", "takim_id", row, 0)
-        self._add_card("📦 Paket Sayacı", "sayac", row, 1)
-        self._add_card("📏 İrtifa (Barometrik)", "irtifa", row, 2)
-        self._add_card("🎯 Durum", "durum", row, 3)
+        # Satır 1: Kimlik, Paket, İrtifa ve Durum (birleşik kart)
+        self._add_multi_value_card("Genel Bilgiler", ["takim_id", "sayac", "irtifa", "durum"], row, 0, 1, 1)
+        
+        # Satır 1: Roket GPS, Görev Yükü GPS ve Kademe GPS (yan yana)
+        self._add_multi_value_card("Roket ", ["roket_gps_irtifa", "roket_enlem", "roket_boylam"], row, 1, 1, 1)
+        self._add_multi_value_card("Görev Yükü ", ["gorev_gps_irtifa", "gorev_enlem", "gorev_boylam"], row, 2, 1, 1)
+        self._add_multi_value_card("Kademe ", ["kademe_gps_irtifa", "kademe_enlem", "kademe_boylam"], row, 3, 1, 1)
         
         row += 1
-        # Satır 2: Ana Roket GPS
-        self._add_card("🚀 Roket GPS İrtifa", "roket_gps_irtifa", row, 0)
-        self._add_card("🚀 Roket Enlem", "roket_enlem", row, 1)
-        self._add_card("🚀 Roket Boylam", "roket_boylam", row, 2, 1, 2)
-        
-        row += 1
-        # Satır 3: Görev Yükü GPS
-        self._add_card("📦 Görev Yükü GPS İrtifa", "gorev_gps_irtifa", row, 0)
-        self._add_card("📦 Görev Yükü Enlem", "gorev_enlem", row, 1)
-        self._add_card("📦 Görev Yükü Boylam", "gorev_boylam", row, 2, 1, 2)
-        
-        row += 1
-        # Satır 4: Kademe GPS
-        self._add_card("🔧 Kademe GPS İrtifa", "kademe_gps_irtifa", row, 0)
-        self._add_card("🔧 Kademe Enlem", "kademe_enlem", row, 1)
-        self._add_card("🔧 Kademe Boylam", "kademe_boylam", row, 2, 1, 2)
-        
-        row += 1
-        # Satır 5: IMU Jiroskop
-        self._add_card("🔄 Jiroskop X", "jiroskop_x", row, 0)
-        self._add_card("🔄 Jiroskop Y", "jiroskop_y", row, 1)
-        self._add_card("🔄 Jiroskop Z", "jiroskop_z", row, 2)
-        self._add_card("📐 Açı", "aci", row, 3)
-        
-        row += 1
-        # Satır 6: IMU İvme
-        self._add_card("⚡ İvme X", "ivme_x", row, 0)
-        self._add_card("⚡ İvme Y", "ivme_y", row, 1)
-        self._add_card("⚡ İvme Z", "ivme_z", row, 2)
-        self._add_card("✅ CRC", "crc", row, 3)
+        # Satır 2: Jiroskop, İvme, Açı ve CRC
+        self._add_multi_value_card("Jiroskop", ["jiroskop_x", "jiroskop_y", "jiroskop_z"], row, 0, 1, 1)
+        self._add_multi_value_card("İvme", ["ivme_x", "ivme_y", "ivme_z"], row, 1, 1, 1)
+        self._add_card("Açı", "aci", row, 2, 1, 1)
+        self._add_card("CRC", "crc", row, 3, 1, 1)
     
     def _add_card(self, title, key, row, col, rowspan=1, colspan=1):
         """
@@ -92,6 +70,47 @@ class TelemetryGridWidget(QWidget):
         self.data_grid.addWidget(card['frame'], row, col, rowspan, colspan)
         self.data_labels[key] = card['value_label']
     
+    def _add_multi_value_card(self, title, keys, row, col, rowspan=1, colspan=1):
+        """
+        Çoklu değer kartı ekler (GPS verileri için).
+        
+        Args:
+            title: Kart başlığı
+            keys: Veri anahtarları listesi [irtifa, enlem, boylam]
+            row, col: Grid pozisyonu
+            rowspan, colspan: Grid span değerleri
+        """
+        card = QFrame()
+        card.setObjectName("data_card")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(4, 2, 4, 2)
+        card_layout.setSpacing(2)
+        
+        # Başlık
+        title_label = QLabel(title)
+        title_label.setObjectName("data_title")
+        card_layout.addWidget(title_label)
+        
+        # Değer label'ı - içeriğe göre
+        if "Genel Bilgiler" in title:
+            default_text = "Takım ID: -\nPaket: -\nİrtifa: -\nDurum: -"
+        elif "gps" in title.lower():
+            default_text = "İrtifa: -\nEnlem: -\nBoylam: -"
+        else:
+            default_text = "X: -\nY: -\nZ: -"
+        
+        value_label = QLabel(default_text)
+        value_label.setObjectName("data_value")
+        value_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        value_label.setStyleSheet("font-size: 13px; line-height: 1.3;")
+        card_layout.addWidget(value_label)
+        
+        self.data_grid.addWidget(card, row, col, rowspan, colspan)
+        
+        # Her bir key için aynı label'ı sakla
+        for key in keys:
+            self.data_labels[key] = value_label
+    
     def _create_data_card(self, title):
         """
         Tek bir veri kartı oluşturur.
@@ -102,8 +121,8 @@ class TelemetryGridWidget(QWidget):
         card = QFrame()
         card.setObjectName("data_card")
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(10, 8, 10, 8)
-        card_layout.setSpacing(3)
+        card_layout.setContentsMargins(4, 2, 4, 2)
+        card_layout.setSpacing(1)
         
         # Başlık
         title_label = QLabel(title)
@@ -129,30 +148,29 @@ class TelemetryGridWidget(QWidget):
         Args:
             telemetry_data: TelemetryData nesnesi
         """
-        self.data_labels['takim_id'].setText(telemetry_data.takim_id)
-        self.data_labels['sayac'].setText(telemetry_data.sayac)
-        self.data_labels['irtifa'].setText(telemetry_data.irtifa)
+        # Genel Bilgiler (birleşik)
+        genel_text = f"Takım ID: {telemetry_data.takim_id}\nPaket: {telemetry_data.sayac}\nİrtifa: {telemetry_data.irtifa}\nDurum: {telemetry_data.durum_text}"
+        self.data_labels['takim_id'].setText(genel_text)
         
-        self.data_labels['roket_gps_irtifa'].setText(telemetry_data.roket_gps_irtifa)
-        self.data_labels['roket_enlem'].setText(telemetry_data.roket_enlem)
-        self.data_labels['roket_boylam'].setText(telemetry_data.roket_boylam)
+        # Roket GPS (birleşik)
+        roket_gps_text = f"İrtifa: {telemetry_data.roket_gps_irtifa}\nEnlem: {telemetry_data.roket_enlem}\nBoylam: {telemetry_data.roket_boylam}"
+        self.data_labels['roket_gps_irtifa'].setText(roket_gps_text)
         
-        self.data_labels['gorev_gps_irtifa'].setText(telemetry_data.gorev_gps_irtifa)
-        self.data_labels['gorev_enlem'].setText(telemetry_data.gorev_enlem)
-        self.data_labels['gorev_boylam'].setText(telemetry_data.gorev_boylam)
+        # Görev Yükü GPS (birleşik)
+        gorev_gps_text = f"İrtifa: {telemetry_data.gorev_gps_irtifa}\nEnlem: {telemetry_data.gorev_enlem}\nBoylam: {telemetry_data.gorev_boylam}"
+        self.data_labels['gorev_gps_irtifa'].setText(gorev_gps_text)
         
-        self.data_labels['kademe_gps_irtifa'].setText(telemetry_data.kademe_gps_irtifa)
-        self.data_labels['kademe_enlem'].setText(telemetry_data.kademe_enlem)
-        self.data_labels['kademe_boylam'].setText(telemetry_data.kademe_boylam)
+        # Kademe GPS (birleşik)
+        kademe_gps_text = f"İrtifa: {telemetry_data.kademe_gps_irtifa}\nEnlem: {telemetry_data.kademe_enlem}\nBoylam: {telemetry_data.kademe_boylam}"
+        self.data_labels['kademe_gps_irtifa'].setText(kademe_gps_text)
         
-        self.data_labels['jiroskop_x'].setText(telemetry_data.jiroskop_x)
-        self.data_labels['jiroskop_y'].setText(telemetry_data.jiroskop_y)
-        self.data_labels['jiroskop_z'].setText(telemetry_data.jiroskop_z)
+        # Jiroskop (birleşik)
+        jiroskop_text = f"X: {telemetry_data.jiroskop_x}\nY: {telemetry_data.jiroskop_y}\nZ: {telemetry_data.jiroskop_z}"
+        self.data_labels['jiroskop_x'].setText(jiroskop_text)
         
-        self.data_labels['ivme_x'].setText(telemetry_data.ivme_x)
-        self.data_labels['ivme_y'].setText(telemetry_data.ivme_y)
-        self.data_labels['ivme_z'].setText(telemetry_data.ivme_z)
+        # İvme (birleşik)
+        ivme_text = f"X: {telemetry_data.ivme_x}\nY: {telemetry_data.ivme_y}\nZ: {telemetry_data.ivme_z}"
+        self.data_labels['ivme_x'].setText(ivme_text)
         
         self.data_labels['aci'].setText(telemetry_data.aci)
-        self.data_labels['durum'].setText(telemetry_data.durum_text)
         self.data_labels['crc'].setText(telemetry_data.crc)

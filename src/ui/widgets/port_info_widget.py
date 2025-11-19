@@ -17,11 +17,11 @@ class PortInfoWidget(QLabel):
     
     def _setup_ui(self):
         """UI'yi yapılandırır."""
-        self.setText(f"🔌 Hedef Port: {self.port_name} (Sabit)")
+        self.setText(f"Hedef Port: {self.port_name}")
         self.setObjectName("port_label")
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
     
     def update_port(self, new_port):
         """Port adını günceller."""
         self.port_name = new_port
-        self.setText(f"🔌 Hedef Port: {self.port_name} (Sabit)")
+        self.setText(f"Hedef Port: {self.port_name}")
