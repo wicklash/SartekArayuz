@@ -1,8 +1,8 @@
+# Sartek GCS - Ground Control Station
+# Gerekli Python paketleri
+
 # GUI Framework
-PyQt6>=6.0.0
+PyQt6>=6.7.0
 
 # Serial Communication
 pyserial>=3.5
-
-# Windows Registry Access (built-in, no install needed)
-# winreg - Python built-in module

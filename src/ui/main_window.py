@@ -3,7 +3,7 @@
 
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QFrame, QLabel
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QScreen
+from PyQt6.QtGui import QScreen, QIcon
 from .styles import MAIN_WINDOW_STYLE, BUTTON_STYLES
 from ..core.serial_manager import SerialManager
 from ..core.data_parser import DataParser
@@ -23,6 +23,7 @@ class MainWindow(QMainWindow):
         self.baudrate = baudrate
         
         self.setWindowTitle("Sartek GCS - Roket Telemetri Sistemi")
+        self.setWindowIcon(QIcon("assets/icon.ico"))
         self.resize(1200, 750)
         self.setMinimumSize(1000, 700)  # Minimum boyut ayarı
         

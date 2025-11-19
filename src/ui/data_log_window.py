@@ -3,7 +3,7 @@
 
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QHBoxLayout
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 
 
 class DataLogWindow(QMainWindow):
@@ -14,6 +14,7 @@ class DataLogWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Telemetri Veri Logları - Detaylı Görünüm")
+        self.setWindowIcon(QIcon("assets/icon.png"))
         self.setGeometry(200, 200, 1000, 600)
         self.log_data = []  # Tüm log verilerini saklar
         self._setup_ui()
