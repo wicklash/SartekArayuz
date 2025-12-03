@@ -6,13 +6,7 @@ import serial
 import time
 import random
 import struct
-
-# ROKET PORTU: com0com ile oluşturduğunuz çiftin BİRİNCİ ucu
-ROCKET_PORT = 'COM7' 
-BAUDRATE = 9600
-
-# Takım bilgileri
-TAKIM_ID = 123456  # Takım numarası
+from src.core.config import SERIAL_PORT_ROCKET, BAUDRATE, TEAM_ID
 paket_sayac = 0
 
 # Barometrik veri
@@ -45,7 +39,7 @@ aci = 0.0
 # Durum ve Kontrol
 durum = 0  # 0: Beklemede, 1: Yükseliyor, 2: Tepe Noktası, 3: İniş
 
-print(f"Roket Simülatörü Başlatıldı. {ROCKET_PORT} portuna {BAUDRATE} baud rate ile yazılıyor.")
+print(f"Roket Simülatörü Başlatıldı. {SERIAL_PORT_ROCKET} portuna {BAUDRATE} baud rate ile yazılıyor.")
 print("Durdurmak için Ctrl+C.")
 
 def calculate_crc(data_string):
@@ -57,9 +51,9 @@ def calculate_crc(data_string):
 
 try:
     # Seriyal portu aç
-    ser = serial.Serial(ROCKET_PORT, BAUDRATE, timeout=1)
+    ser = serial.Serial(SERIAL_PORT_ROCKET, BAUDRATE, timeout=1)
 except serial.SerialException as e:
-    print(f"Hata: Port açılamadı ({ROCKET_PORT}). {e}")
+    print(f"Hata: Port açılamadı ({SERIAL_PORT_ROCKET}). {e}")
     print("com0com çalışıyor mu? Doğru portu seçtiniz mi?")
     exit()
 
@@ -123,7 +117,7 @@ try:
         
         # Veri paketini oluştur (CSV formatında)
         data_parts = [
-            str(TAKIM_ID),
+            str(TEAM_ID),
             str(paket_sayac),
             f"{irtifa:.2f}",
             f"{roket_gps_irtifa:.2f}",
@@ -163,4 +157,4 @@ except KeyboardInterrupt:
 finally:
     if ser.is_open:
         ser.close()
-        print(f"Port {ROCKET_PORT} kapatıldı.")
+        print(f"Port {SERIAL_PORT_ROCKET} kapatıldı.")

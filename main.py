@@ -9,6 +9,7 @@ import sys
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from src.ui.main_window import MainWindow
+from src.core.config import SERIAL_PORT_GCS, BAUDRATE
 
 # Windows görev çubuğunda ikonu göstermek için
 try:
@@ -17,10 +18,6 @@ try:
     windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 except:
     pass
-
-# Konfigürasyon
-GCS_PORT = 'COM8'  # GCS dinleme portu
-BAUDRATE = 9600    # İletişim hızı
 
 
 def main():
@@ -32,7 +29,7 @@ def main():
     app.setWindowIcon(QIcon('assets/icon.ico'))
     
     # Ana pencereyi oluştur (worker_class parametresi artık gerekmiyor)
-    window = MainWindow(GCS_PORT, BAUDRATE, None)
+    window = MainWindow(SERIAL_PORT_GCS, BAUDRATE, None)
     window.show()
     
     # Uygulamayı çalıştır
