@@ -3,13 +3,18 @@
 
 import os
 import csv
+import threading
+import queue
 from datetime import datetime
 from .data_parser import TelemetryData
 
 class CSVLogger:
     """
     Telemetri verilerini CSV formatında dosyaya kaydeder.
-    Her oturum için 'logs/' klasöründe tarih-saat etiketli yeni bir dosya oluşturur.
+    
+    PERFORMANS OPTİMİZASYONU:
+    Dosya yazma işlemi ana thread'i (UI) bloklamamak için
+    ayrı bir thread üzerinde ve Queue kullanılarak yapılır.
     """
     
     def __init__(self, log_dir="logs"):
@@ -18,6 +23,11 @@ class CSVLogger:
         self.writer = None
         self.filename = None
         self.is_active = False
+        
+        # Threading ve Queue yapısı
+        self.log_queue = queue.Queue()
+        self.write_thread = None
+        self.stop_event = threading.Event()
         
         # Log klasörünü oluştur
         if not os.path.exists(self.log_dir):
@@ -28,7 +38,7 @@ class CSVLogger:
 
     def start_logging(self):
         """
-        Yeni bir log dosyası oluşturur ve yazmaya başlar.
+        Yeni bir log dosyası oluşturur ve yazma thread'ini başlatır.
         """
         if self.is_active:
             return
@@ -38,7 +48,7 @@ class CSVLogger:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             self.filename = os.path.join(self.log_dir, f"telemetry_{timestamp}.csv")
             
-            # Dosyayı aç (newline='' csv modülü için gerekli)
+            # Dosyayı aç
             self.file = open(self.filename, 'w', newline='', encoding='utf-8')
             self.writer = csv.writer(self.file)
             
@@ -56,7 +66,13 @@ class CSVLogger:
             self.file.flush()
             
             self.is_active = True
-            print(f"Loglama başlatıldı: {self.filename}")
+            
+            # Thread başlat
+            self.stop_event.clear()
+            self.write_thread = threading.Thread(target=self._write_loop, daemon=True)
+            self.write_thread.start()
+            
+            print(f"Loglama başlatıldı (Thread): {self.filename}")
             
         except Exception as e:
             print(f"Log dosyası oluşturma hatası: {e}")
@@ -64,14 +80,44 @@ class CSVLogger:
 
     def log(self, data: TelemetryData):
         """
-        Gelen telemetri verisini dosyaya yazar.
+        Gelen telemetri verisini kuyruğa ekler (Non-blocking).
         
         Args:
             data: TelemetryData nesnesi
         """
-        if not self.is_active or not self.writer:
+        if not self.is_active:
             return
             
+        # Veriyi kuyruğa at, işlem hemen döner
+        self.log_queue.put(data)
+
+    def _write_loop(self):
+        """
+        Arka planda çalışan thread fonksiyonu.
+        Kuyruktaki verileri dosyaya yazar.
+        """
+        while not self.stop_event.is_set() or not self.log_queue.empty():
+            try:
+                # Kuyruktan veri al (timeout ile bekle ki stop_event kontrol edilebilsin)
+                try:
+                    data = self.log_queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+                
+                # Veriyi işle ve yaz
+                self._write_to_file(data)
+                self.log_queue.task_done()
+                
+            except Exception as e:
+                print(f"Log thread hatası: {e}")
+    
+    def _write_to_file(self, data: TelemetryData):
+        """
+        Tek bir veri satırını dosyaya yazar.
+        """
+        if not self.writer or not self.file:
+            return
+
         try:
             # Şu anki zaman
             current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
@@ -103,19 +149,34 @@ class CSVLogger:
             ]
             
             self.writer.writerow(row)
-            self.file.flush() # Verinin diske yazıldığından emin ol
+            # Her satırdan sonra flush, veri kaybını önler ama performans maliyeti vardır.
+            # Thread içinde olduğumuz için UI bloklanmaz, güvenle kullanabiliriz.
+            self.file.flush()
             
         except Exception as e:
-            print(f"Log yazma hatası: {e}")
+            print(f"Dosya yazma hatası: {e}")
 
     def stop_logging(self):
         """
-        Loglamayı durdurur ve dosyayı kapatır.
+        Loglamayı durdurur, kalan kuyruğu boşaltır ve dosyayı kapatır.
         """
+        if not self.is_active:
+            return
+
+        print("Loglama durduruluyor, kuyruk boşaltılıyor...")
+        
+        # Thread'i durdurma sinyali ver
+        self.stop_event.set()
+        
+        # Thread'in bitmesini bekle
+        if self.write_thread:
+            self.write_thread.join(timeout=2.0)
+        
+        # Dosyayı kapat
         if self.file:
             try:
                 self.file.close()
-                print(f"Loglama durduruldu: {self.filename}")
+                print(f"Loglama tamamlandı: {self.filename}")
             except Exception as e:
                 print(f"Dosya kapatma hatası: {e}")
             finally:
