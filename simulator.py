@@ -234,8 +234,8 @@ try:
         checksum = binary_packet[75]
         print(f"Gönderildi: Paket #{packet_counter} (Sim: {paket_sayac}) | İrtifa: {irtifa:.2f}m | Durum: {durum} | Checksum: {checksum} | Boyut: {len(binary_packet)} byte")
 
-        # 10Hz (saniyede 10 kez) veri göndermek için 0.1 saniye bekle
-        time.sleep(0.1)
+        # 24Hz (saniyede 24 kez) veri göndermek için bekle
+        time.sleep(1/24)
 
 except KeyboardInterrupt:
     print("\nSimülatör durduruldu.")

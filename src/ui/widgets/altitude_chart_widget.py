@@ -18,7 +18,7 @@ class AltitudeChartWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         # Son 100 veri noktasını tutmak için deque kullanılıyor
-        self.altitude_data = deque(maxlen=100)
+        self.altitude_data = deque(maxlen=10000)
         self.max_altitude = 0
         self._setup_ui()
     
