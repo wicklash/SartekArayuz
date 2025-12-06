@@ -8,6 +8,7 @@ from .styles import MAIN_WINDOW_STYLE, BUTTON_STYLES
 from ..core.serial_manager import SerialManager
 from ..core.data_parser import DataParser
 from ..core.simulator_manager import SimulatorManager
+from ..core.csv_logger import CSVLogger
 from .widgets.port_info_widget import PortInfoWidget
 from .widgets.simulator_control_widget import SimulatorControlWidget
 from .widgets.connection_control_widget import ConnectionControlWidget
@@ -47,6 +48,9 @@ class MainWindow(QMainWindow):
         
         # Simulator Manager oluştur
         self.simulator_manager = SimulatorManager()
+        
+        # CSV Logger oluştur
+        self.csv_logger = CSVLogger()
         
         # Simulator sinyallerini bağla
         self.simulator_manager.simulator_started.connect(self.on_simulator_started)
@@ -175,6 +179,9 @@ class MainWindow(QMainWindow):
         self.port_info_widget.set_receiver_port_enabled(False)  # Bağlıyken alıcı port seçimini devre dışı bırak
         # Verici port başka bilgisayara veri aktarımı için, bağlantı durumundan etkilenmez
         print("UI: Bağlantı kuruldu.")
+        
+        # Loglamayı başlat
+        self.csv_logger.start_logging()
     
     def on_connection_stopped(self):
         """
@@ -184,6 +191,9 @@ class MainWindow(QMainWindow):
         self.port_info_widget.set_receiver_port_enabled(True)  # Alıcı port seçimini tekrar etkinleştir
         # Verici port başka bilgisayara veri aktarımı için, bağlantı durumundan etkilenmez
         print("UI: Bağlantı kesildi.")
+        
+        # Loglamayı durdur
+        self.csv_logger.stop_logging()
 
     def on_data_received(self, raw_data):
         """
@@ -200,6 +210,9 @@ class MainWindow(QMainWindow):
         
         # Parse edilmiş veriyi log widget'a ekle (binary hex yerine parse edilmiş veri)
         self.data_log_widget.add_log(telemetry)
+        
+        # CSV dosyasına kaydet
+        self.csv_logger.log(telemetry)
         
         # UI'yi güncelle
         self.telemetry_grid_widget.update_data(telemetry)
@@ -235,6 +248,9 @@ class MainWindow(QMainWindow):
         """
         self.simulator_control_widget.set_simulator_running(True)
         print("UI: Simülatör başlatıldı.")
+        
+        # Loglamayı başlat
+        self.csv_logger.start_logging()
     
     def on_simulator_stopped(self):
         """
@@ -242,6 +258,9 @@ class MainWindow(QMainWindow):
         """
         self.simulator_control_widget.set_simulator_running(False)
         print("UI: Simülatör durduruldu.")
+        
+        # Loglamayı durdur
+        self.csv_logger.stop_logging()
     
     def on_simulator_error(self, error_msg):
         """
@@ -259,6 +278,7 @@ class MainWindow(QMainWindow):
         # Simülatör ve serial bağlantıyı temizle
         self.simulator_manager.cleanup()
         self.serial_manager.stop_connection()
+        self.csv_logger.stop_logging()
         
         # Manager'ın thread'ini bekle
         if self.serial_manager.serial_thread:

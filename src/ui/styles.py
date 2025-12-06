@@ -159,3 +159,47 @@ COLORS = {
     'background_dark': '#1a1a1a',
     'surface': '#2d2d2d'
 }
+
+# Log Penceresi Stilleri
+DATA_LOG_WINDOW_STYLE = """
+    QMainWindow {
+        background-color: #1a1a1a;
+    }
+"""
+
+TABLE_VIEW_STYLE = """
+    QTableView {
+        background-color: #2d2d2d;
+        color: #e0e0e0;
+        border: 1px solid #3d3d3d;
+        border-radius: 4px;
+        gridline-color: #3d3d3d;
+        font-family: 'Consolas', 'Courier New', monospace;
+        font-size: 11px;
+        selection-background-color: #4d4d4d;
+    }
+    QHeaderView::section {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        padding: 8px;
+        border: 1px solid #3d3d3d;
+        font-weight: 700;
+        font-size: 10px;
+        text-transform: uppercase;
+    }
+"""
+
+CLEAR_BUTTON_STYLE = """
+    QPushButton {
+        background-color: #f44336;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    QPushButton:hover {
+        background-color: #ef5350;
+    }
+"""

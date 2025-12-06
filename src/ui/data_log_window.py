@@ -1,9 +1,11 @@
 # data_log_window.py
 # Detaylı veri log penceresi
 
-from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTableView, QHeaderView, QPushButton, QHBoxLayout
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QIcon
+from .telemetry_table_model import TelemetryTableModel
+from .styles import DATA_LOG_WINDOW_STYLE, TABLE_VIEW_STYLE, CLEAR_BUTTON_STYLE
 
 
 class DataLogWindow(QMainWindow):
@@ -16,7 +18,11 @@ class DataLogWindow(QMainWindow):
         self.setWindowTitle("Telemetri Veri Logları - Detaylı Görünüm")
         self.setWindowIcon(QIcon("assets/icon.png"))
         self.setGeometry(200, 200, 1000, 600)
-        self.log_data = []  # Tüm log verilerini saklar (TelemetryData nesneleri)
+        self.setGeometry(200, 200, 1000, 600)
+        
+        # Model'i oluştur (veriler burada tutulacak)
+        self.model = TelemetryTableModel()
+        
         self._setup_ui()
     
     def _setup_ui(self):
@@ -33,64 +39,19 @@ class DataLogWindow(QMainWindow):
         
         self.clear_button = QPushButton("Temizle")
         self.clear_button.clicked.connect(self.clear_logs)
-        self.clear_button.setStyleSheet("""
-            QPushButton {
-                background-color: #f44336;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #ef5350;
-            }
-        """)
+        self.clear_button.clicked.connect(self.clear_logs)
+        self.clear_button.setStyleSheet(CLEAR_BUTTON_STYLE)
         
         button_layout.addStretch()
         button_layout.addWidget(self.clear_button)
         
-        # Tablo widget'ı
-        self.table = QTableWidget()
-        self.table.setColumnCount(22)  # Sıra numarası + 21 telemetri alanı
-        
-        # Sütun başlıkları
-        headers = [
-            "#", "Takım ID", "Sayac", "İrtifa", "Roket GPS İrtifa", "Roket Enlem", "Roket Boylam",
-            "Görev GPS İrtifa", "Görev Enlem", "Görev Boylam", "Kademe GPS İrtifa", 
-            "Kademe Enlem", "Kademe Boylam", "Jiroskop X", "Jiroskop Y", "Jiroskop Z",
-            "İvme X", "İvme Y", "İvme Z", "Açı", "Durum", "CRC"
-        ]
-        self.table.setHorizontalHeaderLabels(headers)
+        # Tablo widget'ı (QTableView)
+        self.table = QTableView()
+        self.table.setModel(self.model)
         
         # Tablo stilleri
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background-color: #2d2d2d;
-                color: #e0e0e0;
-                border: 1px solid #3d3d3d;
-                border-radius: 4px;
-                gridline-color: #3d3d3d;
-                font-family: 'Consolas', 'Courier New', monospace;
-                font-size: 11px;
-            }
-            QTableWidget::item {
-                padding: 5px;
-            }
-            QTableWidget::item:selected {
-                background-color: #4d4d4d;
-            }
-            QHeaderView::section {
-                background-color: #1a1a1a;
-                color: #ffffff;
-                padding: 8px;
-                border: 1px solid #3d3d3d;
-                font-weight: 700;
-                font-size: 10px;
-                text-transform: uppercase;
-            }
-        """)
+        # Tablo stilleri
+        self.table.setStyleSheet(TABLE_VIEW_STYLE)
         
         # Sütun genişliklerini ayarla
         self.table.setColumnWidth(0, 50)  # Sıra numarası
@@ -111,97 +72,27 @@ class DataLogWindow(QMainWindow):
         layout.addWidget(self.table)
         
         # Pencere stili
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1a1a1a;
-            }
-        """)
+        # Pencere stili
+        self.setStyleSheet(DATA_LOG_WINDOW_STYLE)
+    
     
     def add_log_entry(self, telemetry_data):
         """
-        Tabloya yeni veri satırı ekler.
-        Pencere açık olmasa bile verileri buffer'da saklar.
-        
-        Args:
-            telemetry_data: TelemetryData nesnesi
+        Model'e yeni veri ekler.
         """
-        # Veriyi buffer'a ekle (pencere açık olmasa bile)
-        self.log_data.append(telemetry_data)
+        self.model.add_row(telemetry_data)
         
-        # Pencere görünürse tabloya ekle
+        # Eğer otomatik scroll isteniyorsa (veya kullanıcı en sondayken)
         if self.isVisible():
-            self._add_row_to_table(telemetry_data)
-    
-    def _add_row_to_table(self, telemetry_data):
-        """
-        Tabloya yeni satır ekler (internal method).
-        
-        Args:
-            telemetry_data: TelemetryData nesnesi
-        """
-        row_position = self.table.rowCount()
-        self.table.insertRow(row_position)
-        
-        # Sıra numarası
-        item = QTableWidgetItem(str(row_position + 1))
-        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.table.setItem(row_position, 0, item)
-        
-        # Telemetri verileri (formatlanmış - UI katmanında)
-        data_items = [
-            str(telemetry_data.takim_id),
-            str(telemetry_data.sayac),
-            telemetry_data.get_formatted_irtifa(),
-            telemetry_data.get_formatted_gps_irtifa(telemetry_data.roket_gps_irtifa),
-            telemetry_data.get_formatted_coordinate(telemetry_data.roket_enlem),
-            telemetry_data.get_formatted_coordinate(telemetry_data.roket_boylam),
-            telemetry_data.get_formatted_gps_irtifa(telemetry_data.gorev_gps_irtifa),
-            telemetry_data.get_formatted_coordinate(telemetry_data.gorev_enlem),
-            telemetry_data.get_formatted_coordinate(telemetry_data.gorev_boylam),
-            telemetry_data.get_formatted_gps_irtifa(telemetry_data.kademe_gps_irtifa),
-            telemetry_data.get_formatted_coordinate(telemetry_data.kademe_enlem),
-            telemetry_data.get_formatted_coordinate(telemetry_data.kademe_boylam),
-            telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_x),
-            telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_y),
-            telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_z),
-            telemetry_data.get_formatted_accel(telemetry_data.ivme_x),
-            telemetry_data.get_formatted_accel(telemetry_data.ivme_y),
-            telemetry_data.get_formatted_accel(telemetry_data.ivme_z),
-            telemetry_data.get_formatted_angle(telemetry_data.aci),
-            telemetry_data.durum_text,
-            str(telemetry_data.checksum)
-        ]
-        
-        for col, data in enumerate(data_items, start=1):
-            item = QTableWidgetItem(str(data))
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.table.setItem(row_position, col, item)
-        
-        # Otomatik scroll (en sona git)
-        self.table.scrollToBottom()
-    
+             self.table.scrollToBottom()
+
     def showEvent(self, event):
         """
-        Pencere gösterildiğinde buffer'daki tüm verileri tabloya yükler.
+        Pencere gösterildiğinde sona scroll et.
         """
         super().showEvent(event)
-        # Buffer'daki tüm verileri tabloya yükle
-        self._load_buffer_to_table()
-    
-    def _load_buffer_to_table(self):
-        """Buffer'daki tüm verileri tabloya yükler."""
-        # Mevcut tabloyu temizle
-        self.table.setRowCount(0)
-        
-        # Buffer'daki tüm verileri ekle
-        for telemetry_data in self.log_data:
-            self._add_row_to_table(telemetry_data)
-        
-        # En sona scroll
-        if self.log_data:
-            self.table.scrollToBottom()
+        self.table.scrollToBottom()
     
     def clear_logs(self):
         """Tüm log verilerini temizler."""
-        self.table.setRowCount(0)
-        self.log_data.clear()
+        self.model.clear()
