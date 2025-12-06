@@ -25,13 +25,14 @@ class AltitudeChartWidget(QWidget):
     def _setup_ui(self):
         """UI'yi yapılandırır ve pyqtgraph PlotWidget'ını hazırlar."""
         layout = QVBoxLayout(self)
-        layout.setSpacing(5)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(3)
+        layout.setContentsMargins(5, 5, 5, 5)
         
         # Başlık
         self.title_label = QLabel("Gerçek Zamanlı İrtifa Grafiği")
         self.title_label.setObjectName("section_title")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_label.setStyleSheet("font-size: 11px; padding: 2px;")  # Başlık boyutunu küçült
         layout.addWidget(self.title_label)
         
         # pyqtgraph PlotWidget oluştur
@@ -71,26 +72,21 @@ class AltitudeChartWidget(QWidget):
         
         layout.addWidget(self.plot_widget)
         
-        # Minimum boyut
-        self.setMinimumHeight(300)
+        # Minimum boyut - küçültülmüş
+        self.setMinimumHeight(200)
     
-    def add_altitude(self, altitude_str):
+    def add_altitude(self, altitude_value):
         """
         Yeni irtifa verisi ekler.
         
-        Bu metod, mevcut kodun bozulmaması için aynı imzayı korur.
-        Gelen string veriyi güvenli bir şekilde float'a çevirir.
+        Performans optimizasyonu: Direkt float değer alır, string parsing yapmaz.
         
         Args:
-            altitude_str: İrtifa string'i (örn: "1234.5 m" veya "123.45")
+            altitude_value: İrtifa değeri (float)
         """
         try:
-            # String'den sayısal değeri çıkar
-            # ' m' ve ',' karakterlerini temizle, '.' ile değiştir
-            altitude_value = float(altitude_str.replace(' m', '').replace(',', '.'))
-            
-            # Veriyi deque'ye ekle
-            self.altitude_data.append(altitude_value)
+            # Veriyi deque'ye ekle (zaten float)
+            self.altitude_data.append(float(altitude_value))
             
             # Maksimum irtifayı güncelle
             if altitude_value > self.max_altitude:
@@ -100,7 +96,7 @@ class AltitudeChartWidget(QWidget):
             # sadece veri setini (setData) güncelle (performans için kritik)
             self._update_plot()
             
-        except (ValueError, AttributeError):
+        except (ValueError, TypeError, AttributeError):
             # Hatalı veri geldiğinde sessizce atla
             pass
     

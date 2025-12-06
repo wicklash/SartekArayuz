@@ -1,13 +1,15 @@
 # simulator.py
 # Bu betik, roketin telemetri verisini simüle eder.
-# COM7 portuna veri yazar.
+# Binary protokol formatında (78 byte) veri gönderir.
 
 import serial
 import time
 import random
 import struct
 from src.core.config import SERIAL_PORT_ROCKET, BAUDRATE, TEAM_ID
-paket_sayac = 0
+
+paket_sayac = 0  # Simülasyon için sayaç (sınırsız artar)
+packet_counter = 0  # Paket sayacı (0-255 döngüsel)
 
 # Barometrik veri
 irtifa = 0.0
@@ -40,14 +42,110 @@ aci = 0.0
 durum = 0  # 0: Beklemede, 1: Yükseliyor, 2: Tepe Noktası, 3: İniş
 
 print(f"Roket Simülatörü Başlatıldı. {SERIAL_PORT_ROCKET} portuna {BAUDRATE} baud rate ile yazılıyor.")
+print("Binary protokol formatında (78 byte) veri gönderiliyor.")
 print("Durdurmak için Ctrl+C.")
 
-def calculate_crc(data_string):
-    """Basit CRC-8 hesaplama"""
-    crc = 0
-    for byte in data_string.encode('utf-8'):
-        crc ^= byte
-    return crc
+
+def create_binary_packet(team_id, counter, irtifa, roket_gps_irtifa, roket_enlem, roket_boylam,
+                         gorev_gps_irtifa, gorev_enlem, gorev_boylam,
+                         kademe_gps_irtifa, kademe_enlem, kademe_boylam,
+                         jiroskop_x, jiroskop_y, jiroskop_z,
+                         ivme_x, ivme_y, ivme_z, aci, durum):
+    """
+    78 byte uzunluğunda binary paket oluşturur.
+    
+    Protokol yapısı (EK-7):
+    - Header (0-3): 0xFF, 0xFF, 0x54, 0x52
+    - Takım ID (4): UINT8
+    - Sayaç (5): UINT8 (0-255 döngüsel)
+    - Payload (6-73): Float32 değerler (Little Endian)
+    - Durum (74): UINT8
+    - Checksum (75): Byte 4-74 arası toplamın mod 256
+    - Footer (76-77): 0x0D, 0x0A
+    
+    Returns:
+        bytes: 78 byte uzunluğunda binary paket
+    """
+    # 78 byte'lık paket oluştur
+    packet = bytearray(78)
+    
+    # Header (Byte 0-3)
+    packet[0] = 0xFF
+    packet[1] = 0xFF
+    packet[2] = 0x54
+    packet[3] = 0x52
+    
+    # Takım ID (Byte 4)
+    packet[4] = team_id & 0xFF  # UINT8
+    
+    # Sayaç (Byte 5) - 0-255 arası döngüsel
+    packet[5] = counter & 0xFF  # UINT8
+    
+    # Payload (Byte 6-73): Float32 değerler (Little Endian <f)
+    # Her float32 değeri 4 byte
+    offset = 6
+    
+    # İrtifa
+    struct.pack_into('<f', packet, offset, float(irtifa))
+    offset += 4
+    
+    # Roket GPS
+    struct.pack_into('<f', packet, offset, float(roket_gps_irtifa))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(roket_enlem))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(roket_boylam))
+    offset += 4
+    
+    # Görev Yükü GPS
+    struct.pack_into('<f', packet, offset, float(gorev_gps_irtifa))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(gorev_enlem))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(gorev_boylam))
+    offset += 4
+    
+    # Kademe GPS
+    struct.pack_into('<f', packet, offset, float(kademe_gps_irtifa))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(kademe_enlem))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(kademe_boylam))
+    offset += 4
+    
+    # IMU - Jiroskop
+    struct.pack_into('<f', packet, offset, float(jiroskop_x))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(jiroskop_y))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(jiroskop_z))
+    offset += 4
+    
+    # IMU - İvme
+    struct.pack_into('<f', packet, offset, float(ivme_x))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(ivme_y))
+    offset += 4
+    struct.pack_into('<f', packet, offset, float(ivme_z))
+    offset += 4
+    
+    # Açı
+    struct.pack_into('<f', packet, offset, float(aci))
+    offset += 4
+    
+    # Durum (Byte 74)
+    packet[74] = durum & 0xFF  # UINT8
+    
+    # Checksum (Byte 75): Byte 4 ile Byte 74 arasındaki tüm baytların toplamının mod 256'sı
+    checksum = sum(packet[4:75]) % 256
+    packet[75] = checksum
+    
+    # Footer (Byte 76-77)
+    packet[76] = 0x0D
+    packet[77] = 0x0A
+    
+    return bytes(packet)
+
 
 try:
     # Seriyal portu aç
@@ -59,8 +157,10 @@ except serial.SerialException as e:
 
 try:
     while True:
-        # Paket sayacını artır
+        # Simülasyon sayacını artır
         paket_sayac += 1
+        # Paket sayacını artır (0-255 arası döngüsel)
+        packet_counter = (packet_counter + 1) % 256
         
         # Duruma göre simülasyon
         if paket_sayac < 50:
@@ -115,39 +215,24 @@ try:
         ivme_y = random.uniform(-2.0, 2.0)
         aci = random.uniform(-5.0, 5.0)
         
-        # Veri paketini oluştur (CSV formatında)
-        data_parts = [
-            str(TEAM_ID),
-            str(paket_sayac),
-            f"{irtifa:.2f}",
-            f"{roket_gps_irtifa:.2f}",
-            f"{roket_enlem:.6f}",
-            f"{roket_boylam:.6f}",
-            f"{gorev_gps_irtifa:.2f}",
-            f"{gorev_enlem:.6f}",
-            f"{gorev_boylam:.6f}",
-            f"{kademe_gps_irtifa:.2f}",
-            f"{kademe_enlem:.6f}",
-            f"{kademe_boylam:.6f}",
-            f"{jiroskop_x:.2f}",
-            f"{jiroskop_y:.2f}",
-            f"{jiroskop_z:.2f}",
-            f"{ivme_x:.2f}",
-            f"{ivme_y:.2f}",
-            f"{ivme_z:.2f}",
-            f"{aci:.2f}",
-            str(durum)
-        ]
+        # Binary paket oluştur
+        binary_packet = create_binary_packet(
+            TEAM_ID, packet_counter,
+            irtifa,
+            roket_gps_irtifa, roket_enlem, roket_boylam,
+            gorev_gps_irtifa, gorev_enlem, gorev_boylam,
+            kademe_gps_irtifa, kademe_enlem, kademe_boylam,
+            jiroskop_x, jiroskop_y, jiroskop_z,
+            ivme_x, ivme_y, ivme_z,
+            aci, durum
+        )
         
-        data_string = ",".join(data_parts)
+        # Binary veriyi gönder
+        ser.write(binary_packet)
         
-        # CRC hesapla ve ekle
-        crc = calculate_crc(data_string)
-        data_string += f",{crc}"
-        
-        # Veriyi gönder
-        ser.write(f"{data_string}\n".encode('utf-8'))
-        print(f"Gönderildi: Paket #{paket_sayac} | İrtifa: {irtifa:.2f}m | Durum: {durum} | CRC: {crc}")
+        # Debug bilgisi
+        checksum = binary_packet[75]
+        print(f"Gönderildi: Paket #{packet_counter} (Sim: {paket_sayac}) | İrtifa: {irtifa:.2f}m | Durum: {durum} | Checksum: {checksum} | Boyut: {len(binary_packet)} byte")
 
         # 10Hz (saniyede 10 kez) veri göndermek için 0.1 saniye bekle
         time.sleep(0.1)

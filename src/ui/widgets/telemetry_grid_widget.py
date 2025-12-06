@@ -144,33 +144,50 @@ class TelemetryGridWidget(QWidget):
     def update_data(self, telemetry_data):
         """
         Telemetri verisini gösterir.
+        UI katmanında formatlama yapılır (performans için).
         
         Args:
-            telemetry_data: TelemetryData nesnesi
+            telemetry_data: TelemetryData nesnesi (saf sayı değerler içerir)
         """
         # Genel Bilgiler (birleşik)
-        genel_text = f"Takım ID: {telemetry_data.takim_id}\nPaket: {telemetry_data.sayac}\nİrtifa: {telemetry_data.irtifa}\nDurum: {telemetry_data.durum_text}"
+        genel_text = (f"Takım ID: {telemetry_data.takim_id}\n"
+                     f"Paket: {telemetry_data.sayac}\n"
+                     f"İrtifa: {telemetry_data.get_formatted_irtifa()}\n"
+                     f"Durum: {telemetry_data.durum_text}")
         self.data_labels['takim_id'].setText(genel_text)
         
         # Roket GPS (birleşik)
-        roket_gps_text = f"İrtifa: {telemetry_data.roket_gps_irtifa}\nEnlem: {telemetry_data.roket_enlem}\nBoylam: {telemetry_data.roket_boylam}"
+        roket_gps_text = (f"İrtifa: {telemetry_data.get_formatted_gps_irtifa(telemetry_data.roket_gps_irtifa)}\n"
+                         f"Enlem: {telemetry_data.get_formatted_coordinate(telemetry_data.roket_enlem)}\n"
+                         f"Boylam: {telemetry_data.get_formatted_coordinate(telemetry_data.roket_boylam)}")
         self.data_labels['roket_gps_irtifa'].setText(roket_gps_text)
         
         # Görev Yükü GPS (birleşik)
-        gorev_gps_text = f"İrtifa: {telemetry_data.gorev_gps_irtifa}\nEnlem: {telemetry_data.gorev_enlem}\nBoylam: {telemetry_data.gorev_boylam}"
+        gorev_gps_text = (f"İrtifa: {telemetry_data.get_formatted_gps_irtifa(telemetry_data.gorev_gps_irtifa)}\n"
+                         f"Enlem: {telemetry_data.get_formatted_coordinate(telemetry_data.gorev_enlem)}\n"
+                         f"Boylam: {telemetry_data.get_formatted_coordinate(telemetry_data.gorev_boylam)}")
         self.data_labels['gorev_gps_irtifa'].setText(gorev_gps_text)
         
         # Kademe GPS (birleşik)
-        kademe_gps_text = f"İrtifa: {telemetry_data.kademe_gps_irtifa}\nEnlem: {telemetry_data.kademe_enlem}\nBoylam: {telemetry_data.kademe_boylam}"
+        kademe_gps_text = (f"İrtifa: {telemetry_data.get_formatted_gps_irtifa(telemetry_data.kademe_gps_irtifa)}\n"
+                          f"Enlem: {telemetry_data.get_formatted_coordinate(telemetry_data.kademe_enlem)}\n"
+                          f"Boylam: {telemetry_data.get_formatted_coordinate(telemetry_data.kademe_boylam)}")
         self.data_labels['kademe_gps_irtifa'].setText(kademe_gps_text)
         
         # Jiroskop (birleşik)
-        jiroskop_text = f"X: {telemetry_data.jiroskop_x}\nY: {telemetry_data.jiroskop_y}\nZ: {telemetry_data.jiroskop_z}"
+        jiroskop_text = (f"X: {telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_x)}\n"
+                        f"Y: {telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_y)}\n"
+                        f"Z: {telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_z)}")
         self.data_labels['jiroskop_x'].setText(jiroskop_text)
         
         # İvme (birleşik)
-        ivme_text = f"X: {telemetry_data.ivme_x}\nY: {telemetry_data.ivme_y}\nZ: {telemetry_data.ivme_z}"
+        ivme_text = (f"X: {telemetry_data.get_formatted_accel(telemetry_data.ivme_x)}\n"
+                    f"Y: {telemetry_data.get_formatted_accel(telemetry_data.ivme_y)}\n"
+                    f"Z: {telemetry_data.get_formatted_accel(telemetry_data.ivme_z)}")
         self.data_labels['ivme_x'].setText(ivme_text)
         
-        self.data_labels['aci'].setText(telemetry_data.aci)
-        self.data_labels['crc'].setText(telemetry_data.crc)
+        # Açı
+        self.data_labels['aci'].setText(telemetry_data.get_formatted_angle(telemetry_data.aci))
+        
+        # Checksum
+        self.data_labels['crc'].setText(str(telemetry_data.checksum))

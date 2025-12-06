@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLabel
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
 from ..data_log_window import DataLogWindow
+from ...core.data_parser import TelemetryData
 
 
 class DataLogWidget(QWidget):
@@ -15,7 +16,8 @@ class DataLogWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMaximumHeight(150)  # Maksimum yükseklik
-        self.detail_window = None  # Detay penceresi
+        self.detail_window = DataLogWindow(self)  # Detay penceresi (her zaman oluşturulur)
+        self.detail_window.hide()  # Başlangıçta gizli
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))  # İmleç değiştir
         self._setup_ui()
     
@@ -52,9 +54,26 @@ class DataLogWidget(QWidget):
         Log'a yeni veri ekler.
         
         Args:
-            data: Eklenecek ham veri string'i
+            data: TelemetryData nesnesi (parse edilmiş veri) veya bytes/string
         """
-        self.log_text.append(data)
+        if isinstance(data, TelemetryData):
+            # Parse edilmiş telemetri verisi - okunabilir format
+            log_line = (f"[#{data.sayac}] Takım: {data.takim_id} | "
+                       f"İrtifa: {data.get_formatted_irtifa()} | "
+                       f"Durum: {data.durum_text} | "
+                       f"Roket GPS: {data.get_formatted_gps_irtifa(data.roket_gps_irtifa)} | "
+                       f"Checksum: {data.checksum}")
+            self.log_text.append(log_line)
+        elif isinstance(data, bytes):
+            # Binary veriyi hex formatında göster (fallback)
+            hex_str = data.hex().upper()
+            # Her 2 karakterden sonra boşluk ekle (daha okunabilir)
+            formatted_hex = ' '.join(hex_str[i:i+2] for i in range(0, len(hex_str), 2))
+            self.log_text.append(f"[Binary] {formatted_hex}")
+        else:
+            # String veri
+            self.log_text.append(str(data))
+        
         # Otomatik scroll (en sona git)
         scrollbar = self.log_text.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
@@ -73,8 +92,6 @@ class DataLogWidget(QWidget):
     
     def show_detail_window(self):
         """Detaylı log penceresini açar."""
-        if self.detail_window is None:
-            self.detail_window = DataLogWindow(self)
         self.detail_window.show()
         self.detail_window.raise_()
         self.detail_window.activateWindow()

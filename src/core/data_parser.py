@@ -1,106 +1,221 @@
 # data_parser.py
 # Telemetri verisi parse mantığı
+# Binary protokol formatını parse eder (78 byte)
 
-from typing import Dict, Optional, Tuple
+import struct
+from typing import Optional
 
 
 class TelemetryData:
-    """Telemetri veri modeli"""
+    """
+    Telemetri veri modeli.
+    Veriler saf sayı (float/int) olarak tutulur.
+    Birim ekleme işi UI katmanında yapılır (performans için).
+    """
     
     def __init__(self):
-        self.takim_id: str = ""
-        self.sayac: str = ""
-        self.irtifa: str = ""
-        self.roket_gps_irtifa: str = ""
-        self.roket_enlem: str = ""
-        self.roket_boylam: str = ""
-        self.gorev_gps_irtifa: str = ""
-        self.gorev_enlem: str = ""
-        self.gorev_boylam: str = ""
-        self.kademe_gps_irtifa: str = ""
-        self.kademe_enlem: str = ""
-        self.kademe_boylam: str = ""
-        self.jiroskop_x: str = ""
-        self.jiroskop_y: str = ""
-        self.jiroskop_z: str = ""
-        self.ivme_x: str = ""
-        self.ivme_y: str = ""
-        self.ivme_z: str = ""
-        self.aci: str = ""
-        self.durum: str = ""
+        # Kimlik ve sayaç
+        self.takim_id: int = 0
+        self.sayac: int = 0
+        
+        # İrtifa (saf float)
+        self.irtifa: float = 0.0
+        
+        # GPS Verileri - Ana Roket (saf float)
+        self.roket_gps_irtifa: float = 0.0
+        self.roket_enlem: float = 0.0
+        self.roket_boylam: float = 0.0
+        
+        # GPS Verileri - Görev Yükü (saf float)
+        self.gorev_gps_irtifa: float = 0.0
+        self.gorev_enlem: float = 0.0
+        self.gorev_boylam: float = 0.0
+        
+        # GPS Verileri - Kademe (saf float)
+        self.kademe_gps_irtifa: float = 0.0
+        self.kademe_enlem: float = 0.0
+        self.kademe_boylam: float = 0.0
+        
+        # IMU Verileri (saf float)
+        self.jiroskop_x: float = 0.0
+        self.jiroskop_y: float = 0.0
+        self.jiroskop_z: float = 0.0
+        self.ivme_x: float = 0.0
+        self.ivme_y: float = 0.0
+        self.ivme_z: float = 0.0
+        self.aci: float = 0.0
+        
+        # Durum
+        self.durum: int = 0
         self.durum_text: str = ""
-        self.crc: str = ""
+        
+        # Checksum
+        self.checksum: int = 0
+    
+    def get_formatted_irtifa(self) -> str:
+        """İrtifa değerini formatlanmış string olarak döndürür."""
+        return f"{self.irtifa:.2f} m"
+    
+    def get_formatted_gps_irtifa(self, value: float) -> str:
+        """GPS irtifa değerini formatlanmış string olarak döndürür."""
+        return f"{value:.2f} m"
+    
+    def get_formatted_coordinate(self, value: float) -> str:
+        """Koordinat değerini formatlanmış string olarak döndürür."""
+        return f"{value:.6f}°"
+    
+    def get_formatted_gyro(self, value: float) -> str:
+        """Jiroskop değerini formatlanmış string olarak döndürür."""
+        return f"{value:.2f}°/s"
+    
+    def get_formatted_accel(self, value: float) -> str:
+        """İvme değerini formatlanmış string olarak döndürür."""
+        return f"{value:.2f} G"
+    
+    def get_formatted_angle(self, value: float) -> str:
+        """Açı değerini formatlanmış string olarak döndürür."""
+        return f"{value:.2f}°"
 
 
 class DataParser:
     """
-    CSV formatındaki telemetri verisini parse eder.
-    Format: TAKIM_ID,SAYAC,IRTIFA,ROKET_GPS_IRT,ROKET_ENLEM,ROKET_BOYLAM,
-            GOREV_GPS_IRT,GOREV_ENLEM,GOREV_BOYLAM,KADEME_GPS_IRT,KADEME_ENLEM,KADEME_BOYLAM,
-            JIRO_X,JIRO_Y,JIRO_Z,IVME_X,IVME_Y,IVME_Z,ACI,DURUM,CRC
+    Binary protokol formatındaki telemetri verisini parse eder.
+    Protokol yapısı (EK-7):
+    - Header (0-3): 0xFF, 0xFF, 0x54, 0x52
+    - Takım ID (4): UINT8
+    - Sayaç (5): UINT8
+    - Payload (6-73): 17 adet Float32 (Little Endian)
+    - Durum (74): UINT8
+    - Checksum (75): Byte 4-74 arası toplamın mod 256
+    - Footer (76-77): 0x0D, 0x0A
     """
+    
+    # Header bytes
+    HEADER = bytes([0xFF, 0xFF, 0x54, 0x52])
+    # Footer bytes
+    FOOTER = bytes([0x0D, 0x0A])
+    # Paket boyutu
+    PACKET_SIZE = 78
     
     # Durum kod çevirileri
     DURUM_MAP = {
-        "0": "Beklemede",
-        "1": "Yükseliyor",
-        "2": "Tepe Noktası",
-        "3": "İniş"
+        0: "Beklemede",
+        1: "Yükseliyor",
+        2: "Tepe Noktası",
+        3: "İniş"
     }
     
     @staticmethod
-    def parse(raw_data: str) -> Optional[TelemetryData]:
+    def parse(raw_data: bytes) -> Optional[TelemetryData]:
         """
-        CSV formatındaki veriyi parse eder.
+        Binary formatındaki veriyi parse eder.
         
         Args:
-            raw_data: CSV formatında ham veri
+            raw_data: Binary formatında ham veri (78 byte)
             
         Returns:
             TelemetryData nesnesi veya hata durumunda None
         """
         try:
-            parts = raw_data.split(',')
+            # Paket boyutu kontrolü
+            if len(raw_data) != DataParser.PACKET_SIZE:
+                print(f"Parse hatası: Yanlış paket boyutu ({len(raw_data)}/{DataParser.PACKET_SIZE})")
+                return None
             
-            if len(parts) < 21:
-                print(f"Parse hatası: Yetersiz veri alanı ({len(parts)}/21)")
+            # Header kontrolü
+            if raw_data[0:4] != DataParser.HEADER:
+                print(f"Parse hatası: Geçersiz header. Beklenen: {DataParser.HEADER.hex()}, Alınan: {raw_data[0:4].hex()}")
+                return None
+            
+            # Footer kontrolü
+            if raw_data[76:78] != DataParser.FOOTER:
+                print(f"Parse hatası: Geçersiz footer. Beklenen: {DataParser.FOOTER.hex()}, Alınan: {raw_data[76:78].hex()}")
+                return None
+            
+            # Checksum kontrolü
+            calculated_checksum = sum(raw_data[4:75]) % 256
+            received_checksum = raw_data[75]
+            if calculated_checksum != received_checksum:
+                print(f"Parse hatası: Checksum uyuşmazlığı. Hesaplanan: {calculated_checksum}, Alınan: {received_checksum}")
                 return None
             
             data = TelemetryData()
             
-            # Veri alanlarını doldur
-            data.takim_id = parts[0]
-            data.sayac = parts[1]
-            data.irtifa = f"{parts[2]} m"
-            data.roket_gps_irtifa = f"{parts[3]} m"
-            data.roket_enlem = f"{parts[4]}°"
-            data.roket_boylam = f"{parts[5]}°"
-            data.gorev_gps_irtifa = f"{parts[6]} m"
-            data.gorev_enlem = f"{parts[7]}°"
-            data.gorev_boylam = f"{parts[8]}°"
-            data.kademe_gps_irtifa = f"{parts[9]} m"
-            data.kademe_enlem = f"{parts[10]}°"
-            data.kademe_boylam = f"{parts[11]}°"
-            data.jiroskop_x = f"{parts[12]}°/s"
-            data.jiroskop_y = f"{parts[13]}°/s"
-            data.jiroskop_z = f"{parts[14]}°/s"
-            data.ivme_x = f"{parts[15]} G"
-            data.ivme_y = f"{parts[16]} G"
-            data.ivme_z = f"{parts[17]} G"
-            data.aci = f"{parts[18]}°"
-            data.durum = parts[19]
-            data.durum_text = DataParser.DURUM_MAP.get(parts[19], parts[19])
-            data.crc = parts[20]
+            # Takım ID (Byte 4)
+            data.takim_id = raw_data[4]
+            
+            # Sayaç (Byte 5)
+            data.sayac = raw_data[5]
+            
+            # Payload (Byte 6-73): Float32 değerler (Little Endian)
+            offset = 6
+            
+            # İrtifa
+            data.irtifa = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            
+            # Roket GPS
+            data.roket_gps_irtifa = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.roket_enlem = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.roket_boylam = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            
+            # Görev Yükü GPS
+            data.gorev_gps_irtifa = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.gorev_enlem = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.gorev_boylam = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            
+            # Kademe GPS
+            data.kademe_gps_irtifa = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.kademe_enlem = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.kademe_boylam = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            
+            # IMU - Jiroskop
+            data.jiroskop_x = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.jiroskop_y = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.jiroskop_z = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            
+            # IMU - İvme
+            data.ivme_x = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.ivme_y = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            data.ivme_z = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            
+            # Açı
+            data.aci = struct.unpack('<f', raw_data[offset:offset+4])[0]
+            offset += 4
+            
+            # Durum (Byte 74)
+            data.durum = raw_data[74]
+            data.durum_text = DataParser.DURUM_MAP.get(data.durum, str(data.durum))
+            
+            # Checksum (Byte 75)
+            data.checksum = received_checksum
             
             return data
             
+        except struct.error as e:
+            print(f"Veri parse hatası (struct): {e}")
+            return None
         except Exception as e:
             print(f"Veri parse hatası: {e}")
-            print(f"Ham veri: {raw_data}")
             return None
     
     @staticmethod
-    def get_durum_text(durum_code: str) -> str:
+    def get_durum_text(durum_code: int) -> str:
         """
         Durum kodunu açıklama metnine çevirir.
         
@@ -110,4 +225,4 @@ class DataParser:
         Returns:
             Durum açıklama metni
         """
-        return DataParser.DURUM_MAP.get(durum_code, durum_code)
+        return DataParser.DURUM_MAP.get(durum_code, str(durum_code))

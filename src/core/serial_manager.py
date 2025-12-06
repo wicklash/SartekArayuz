@@ -11,7 +11,7 @@ class SerialManager(QObject):
     UI'dan iş mantığını ayırır.
     """
     # UI'ye gönderilecek sinyaller
-    data_received = pyqtSignal(str)     # Veri geldiğinde
+    data_received = pyqtSignal(bytes)   # Veri geldiğinde (binary paket)
     connection_error = pyqtSignal(str)  # Bağlantı hatası
     connection_started = pyqtSignal()   # Bağlantı başladı
     connection_stopped = pyqtSignal()   # Bağlantı durduruldu
@@ -22,6 +22,15 @@ class SerialManager(QObject):
         self.baudrate = baudrate
         self.serial_thread = None
         self.serial_worker = None
+    
+    def set_port(self, port):
+        """
+        Port'u dinamik olarak ayarlar.
+        
+        Args:
+            port: Port adı (örn: 'COM1')
+        """
+        self.port = port
         
     def start_connection(self):
         """
@@ -29,6 +38,12 @@ class SerialManager(QObject):
         """
         if self.serial_thread and self.serial_thread.isRunning():
             print("Bağlantı zaten aktif!")
+            return
+        
+        if not self.port:
+            error_msg = "Port seçilmedi!"
+            print(f"Hata: {error_msg}")
+            self.connection_error.emit(error_msg)
             return
             
         print(f"{self.port} portuna {self.baudrate} baud ile bağlanılıyor...")

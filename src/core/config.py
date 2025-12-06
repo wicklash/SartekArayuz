@@ -6,15 +6,27 @@ Bu dosya, projedeki tüm sabit değerleri merkezi olarak yönetir.
 Port numaraları, baud rate ve takım bilgileri gibi değerleri buradan değiştirebilirsiniz.
 """
 
-# Seri Port Konfigürasyonu
-# GCS (Ground Control Station) - Yer istasyonunun dinleyeceği port
-SERIAL_PORT_GCS = 'COM1'
+import serial.tools.list_ports
 
+
+# Seri Port Konfigürasyonu
 # Roket Simülatörü - Simülatörün yazacağı port
+# Not: GCS portu UI üzerinden kullanıcı tarafından seçilir
 SERIAL_PORT_ROCKET = 'COM2'
 
 # Haberleşme Hızı (Baud Rate)
-BAUDRATE = 9600
+BAUDRATE = 19200
 
 # Takım Bilgileri
 TEAM_ID = 123456  # Takım numarası
+
+
+def get_available_ports():
+    """
+    Sistemde mevcut seri portların listesini döndürür.
+    
+    Returns:
+        list: Port isimlerinin listesi (örn: ['COM1', 'COM2', 'COM3'])
+    """
+    ports = serial.tools.list_ports.comports()
+    return [port.device for port in ports]

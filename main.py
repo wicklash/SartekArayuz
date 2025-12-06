@@ -9,7 +9,7 @@ import sys
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from src.ui.main_window import MainWindow
-from src.core.config import SERIAL_PORT_GCS, BAUDRATE
+from src.core.config import BAUDRATE
 
 # Windows görev çubuğunda ikonu göstermek için
 try:
@@ -28,8 +28,8 @@ def main():
     # Uygulama ikonunu ayarla (görev çubuğu için)
     app.setWindowIcon(QIcon('assets/icon.ico'))
     
-    # Ana pencereyi oluştur (worker_class parametresi artık gerekmiyor)
-    window = MainWindow(SERIAL_PORT_GCS, BAUDRATE, None)
+    # Ana pencereyi oluştur (port artık UI'den seçilecek)
+    window = MainWindow(BAUDRATE, None)
     window.show()
     
     # Uygulamayı çalıştır

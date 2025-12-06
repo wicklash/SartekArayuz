@@ -16,7 +16,7 @@ class DataLogWindow(QMainWindow):
         self.setWindowTitle("Telemetri Veri Logları - Detaylı Görünüm")
         self.setWindowIcon(QIcon("assets/icon.png"))
         self.setGeometry(200, 200, 1000, 600)
-        self.log_data = []  # Tüm log verilerini saklar
+        self.log_data = []  # Tüm log verilerini saklar (TelemetryData nesneleri)
         self._setup_ui()
     
     def _setup_ui(self):
@@ -120,6 +120,21 @@ class DataLogWindow(QMainWindow):
     def add_log_entry(self, telemetry_data):
         """
         Tabloya yeni veri satırı ekler.
+        Pencere açık olmasa bile verileri buffer'da saklar.
+        
+        Args:
+            telemetry_data: TelemetryData nesnesi
+        """
+        # Veriyi buffer'a ekle (pencere açık olmasa bile)
+        self.log_data.append(telemetry_data)
+        
+        # Pencere görünürse tabloya ekle
+        if self.isVisible():
+            self._add_row_to_table(telemetry_data)
+    
+    def _add_row_to_table(self, telemetry_data):
+        """
+        Tabloya yeni satır ekler (internal method).
         
         Args:
             telemetry_data: TelemetryData nesnesi
@@ -132,29 +147,29 @@ class DataLogWindow(QMainWindow):
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.table.setItem(row_position, 0, item)
         
-        # Telemetri verileri
+        # Telemetri verileri (formatlanmış - UI katmanında)
         data_items = [
-            telemetry_data.takim_id,
-            telemetry_data.sayac,
-            telemetry_data.irtifa,
-            telemetry_data.roket_gps_irtifa,
-            telemetry_data.roket_enlem,
-            telemetry_data.roket_boylam,
-            telemetry_data.gorev_gps_irtifa,
-            telemetry_data.gorev_enlem,
-            telemetry_data.gorev_boylam,
-            telemetry_data.kademe_gps_irtifa,
-            telemetry_data.kademe_enlem,
-            telemetry_data.kademe_boylam,
-            telemetry_data.jiroskop_x,
-            telemetry_data.jiroskop_y,
-            telemetry_data.jiroskop_z,
-            telemetry_data.ivme_x,
-            telemetry_data.ivme_y,
-            telemetry_data.ivme_z,
-            telemetry_data.aci,
+            str(telemetry_data.takim_id),
+            str(telemetry_data.sayac),
+            telemetry_data.get_formatted_irtifa(),
+            telemetry_data.get_formatted_gps_irtifa(telemetry_data.roket_gps_irtifa),
+            telemetry_data.get_formatted_coordinate(telemetry_data.roket_enlem),
+            telemetry_data.get_formatted_coordinate(telemetry_data.roket_boylam),
+            telemetry_data.get_formatted_gps_irtifa(telemetry_data.gorev_gps_irtifa),
+            telemetry_data.get_formatted_coordinate(telemetry_data.gorev_enlem),
+            telemetry_data.get_formatted_coordinate(telemetry_data.gorev_boylam),
+            telemetry_data.get_formatted_gps_irtifa(telemetry_data.kademe_gps_irtifa),
+            telemetry_data.get_formatted_coordinate(telemetry_data.kademe_enlem),
+            telemetry_data.get_formatted_coordinate(telemetry_data.kademe_boylam),
+            telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_x),
+            telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_y),
+            telemetry_data.get_formatted_gyro(telemetry_data.jiroskop_z),
+            telemetry_data.get_formatted_accel(telemetry_data.ivme_x),
+            telemetry_data.get_formatted_accel(telemetry_data.ivme_y),
+            telemetry_data.get_formatted_accel(telemetry_data.ivme_z),
+            telemetry_data.get_formatted_angle(telemetry_data.aci),
             telemetry_data.durum_text,
-            telemetry_data.crc
+            str(telemetry_data.checksum)
         ]
         
         for col, data in enumerate(data_items, start=1):
@@ -164,6 +179,27 @@ class DataLogWindow(QMainWindow):
         
         # Otomatik scroll (en sona git)
         self.table.scrollToBottom()
+    
+    def showEvent(self, event):
+        """
+        Pencere gösterildiğinde buffer'daki tüm verileri tabloya yükler.
+        """
+        super().showEvent(event)
+        # Buffer'daki tüm verileri tabloya yükle
+        self._load_buffer_to_table()
+    
+    def _load_buffer_to_table(self):
+        """Buffer'daki tüm verileri tabloya yükler."""
+        # Mevcut tabloyu temizle
+        self.table.setRowCount(0)
+        
+        # Buffer'daki tüm verileri ekle
+        for telemetry_data in self.log_data:
+            self._add_row_to_table(telemetry_data)
+        
+        # En sona scroll
+        if self.log_data:
+            self.table.scrollToBottom()
     
     def clear_logs(self):
         """Tüm log verilerini temizler."""

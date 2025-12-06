@@ -17,10 +17,10 @@ from .widgets.data_log_widget import DataLogWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, gcs_port, baudrate, worker_class):
+    def __init__(self, baudrate, worker_class):
         super().__init__()
-        self.gcs_port = gcs_port
         self.baudrate = baudrate
+        self.selected_port = None  # UI'den seçilecek port
         
         self.setWindowTitle("Sartek GCS - Roket Telemetri Sistemi")
         self.setWindowIcon(QIcon("assets/icon.ico"))
@@ -36,8 +36,8 @@ class MainWindow(QMainWindow):
         # Modern görünüm için stil ayarları
         self.setStyleSheet(MAIN_WINDOW_STYLE)
 
-        # Serial Manager oluştur
-        self.serial_manager = SerialManager(gcs_port, baudrate)
+        # Serial Manager oluştur (port başlangıçta None, UI'den seçilecek)
+        self.serial_manager = SerialManager(None, baudrate)
         
         # Manager sinyallerini bağla
         self.serial_manager.data_received.connect(self.on_data_received)
@@ -59,8 +59,10 @@ class MainWindow(QMainWindow):
         self.layout.setSpacing(15)
         self.layout.setContentsMargins(20, 20, 20, 20)
         
-        # Port bilgi widget'ı
-        self.port_info_widget = PortInfoWidget(f"{self.gcs_port}")
+        # Port bilgi widget'ı (port seçimi burada yapılır)
+        # Alıcı Port: GCS için, Verici Port: Başka bilgisayara veri aktarımı için (şimdilik kullanılmıyor)
+        self.port_info_widget = PortInfoWidget("Port seçilmedi", "Port seçilmedi")
+        self.port_info_widget.receiver_port_selected.connect(self._on_receiver_port_selected)
         
         # Ana horizontal layout (Sol: Kontrol, Sağ: Container)
         main_horizontal_layout = QHBoxLayout()
@@ -135,10 +137,28 @@ class MainWindow(QMainWindow):
         
         self.setCentralWidget(self.central_widget)
 
+    def _on_receiver_port_selected(self, port):
+        """
+        Alıcı port seçildiğinde çağrılır.
+        
+        Args:
+            port: Seçilen alıcı port adı
+        """
+        self.selected_port = port
+        print(f"Alıcı port seçildi: {port}")
+    
     def start_serial_connection(self):
         """
         Seri port bağlantısını başlatır (Manager üzerinden).
+        Port bilgisi port_info_widget'ten alınır.
         """
+        port = self.port_info_widget.get_selected_port()
+        if not port:
+            print("Lütfen geçerli bir port seçin.")
+            return
+        
+        self.selected_port = port
+        self.serial_manager.set_port(port)
         self.serial_manager.start_connection()
 
     def stop_serial_connection(self):
@@ -152,6 +172,8 @@ class MainWindow(QMainWindow):
         Bağlantı başladığında UI'yi günceller.
         """
         self.connection_control_widget.set_connected(True)
+        self.port_info_widget.set_receiver_port_enabled(False)  # Bağlıyken alıcı port seçimini devre dışı bırak
+        # Verici port başka bilgisayara veri aktarımı için, bağlantı durumundan etkilenmez
         print("UI: Bağlantı kuruldu.")
     
     def on_connection_stopped(self):
@@ -159,30 +181,34 @@ class MainWindow(QMainWindow):
         Bağlantı durdurulduğunda UI'yi günceller.
         """
         self.connection_control_widget.set_connected(False)
+        self.port_info_widget.set_receiver_port_enabled(True)  # Alıcı port seçimini tekrar etkinleştir
+        # Verici port başka bilgisayara veri aktarımı için, bağlantı durumundan etkilenmez
         print("UI: Bağlantı kesildi.")
 
     def on_data_received(self, raw_data):
         """
         Manager'dan gelen ham veriyi parse eder ve UI'yi günceller.
-        """
-        # Ham veriyi log'a ekle
-        self.data_log_widget.add_log(raw_data)
         
+        Args:
+            raw_data: Binary formatında ham veri (78 byte paket)
+        """
         # DataParser ile parse et
         telemetry = DataParser.parse(raw_data)
         
         if telemetry is None:
             return  # Parse hatası
         
+        # Parse edilmiş veriyi log widget'a ekle (binary hex yerine parse edilmiş veri)
+        self.data_log_widget.add_log(telemetry)
+        
         # UI'yi güncelle
         self.telemetry_grid_widget.update_data(telemetry)
         
-        # İrtifa grafiğine veri ekle
+        # İrtifa grafiğine veri ekle (direkt float değer - performans için)
         self.altitude_chart.add_altitude(telemetry.irtifa)
         
-        # Detay penceresine veri ekle (açıksa)
-        if self.data_log_widget.detail_window is not None and self.data_log_widget.detail_window.isVisible():
-            self.data_log_widget.detail_window.add_log_entry(telemetry)
+        # Detay penceresine veri ekle (pencere açık olmasa bile buffer'a eklenir)
+        self.data_log_widget.detail_window.add_log_entry(telemetry)
 
     def handle_connection_error(self, error_msg):
         """

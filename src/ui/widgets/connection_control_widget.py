@@ -1,17 +1,19 @@
 # connection_control_widget.py
 # Bağlantı kontrol widget'ı
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt6.QtCore import pyqtSignal, QTimer
 
 
 class ConnectionControlWidget(QWidget):
     """
     Seri port bağlantı kontrolleri.
+    Sadece bağlan/bağlantıyı kes butonlarını içerir.
+    Port seçimi port_info_widget'te yapılır.
     """
     
     # Sinyaller
-    connect_requested = pyqtSignal()
+    connect_requested = pyqtSignal()  # Bağlan butonuna tıklandığında
     disconnect_requested = pyqtSignal()
     
     def __init__(self, button_styles, parent=None):
