@@ -8,7 +8,9 @@ from .styles import MAIN_WINDOW_STYLE, BUTTON_STYLES
 from ..core.serial_manager import SerialManager
 from ..core.data_parser import DataParser
 from ..core.simulator_manager import SimulatorManager
+from ..core.transmitter_manager import TransmitterManager
 from ..core.csv_logger import CSVLogger
+from ..core import config  # Config modülü eklendi
 from .widgets.port_info_widget import PortInfoWidget
 from .widgets.simulator_control_widget import SimulatorControlWidget
 from .widgets.connection_control_widget import ConnectionControlWidget
@@ -18,9 +20,9 @@ from .widgets.data_log_widget import DataLogWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, baudrate, worker_class):
+    def __init__(self):
         super().__init__()
-        self.baudrate = baudrate
+        # self.baudrate satırı silindi, artık config'den alınıyor
         self.selected_port = None  # UI'den seçilecek port
         
         self.setWindowTitle("Sartek GCS - Roket Telemetri Sistemi")
@@ -37,14 +39,26 @@ class MainWindow(QMainWindow):
         # Modern görünüm için stil ayarları
         self.setStyleSheet(MAIN_WINDOW_STYLE)
 
+        # Config değerleri
+        receiver_baudrate = config.RECEIVER_BAUDRATE
+        transmitter_baudrate = config.TRANSMITTER_BAUDRATE
+
         # Serial Manager oluştur (port başlangıçta None, UI'den seçilecek)
-        self.serial_manager = SerialManager(None, baudrate)
+        self.serial_manager = SerialManager(port=None, baudrate=receiver_baudrate)
         
         # Manager sinyallerini bağla
         self.serial_manager.data_received.connect(self.on_data_received)
         self.serial_manager.connection_error.connect(self.handle_connection_error)
         self.serial_manager.connection_started.connect(self.on_connection_started)
         self.serial_manager.connection_stopped.connect(self.on_connection_stopped)
+        
+        # Transmitter Manager oluştur (hakem arayüzüne veri göndermek için)
+        self.transmitter_manager = TransmitterManager(None, transmitter_baudrate)
+        
+        # Transmitter sinyallerini bağla
+        self.transmitter_manager.transmission_error.connect(self.handle_transmission_error)
+        self.transmitter_manager.transmission_started.connect(self.on_transmission_started)
+        self.transmitter_manager.transmission_stopped.connect(self.on_transmission_stopped)
         
         # Simulator Manager oluştur
         self.simulator_manager = SimulatorManager()
@@ -64,9 +78,10 @@ class MainWindow(QMainWindow):
         self.layout.setContentsMargins(20, 20, 20, 20)
         
         # Port bilgi widget'ı (port seçimi burada yapılır)
-        # Alıcı Port: GCS için, Verici Port: Başka bilgisayara veri aktarımı için (şimdilik kullanılmıyor)
+        # Alıcı Port: GCS için, Verici Port: Hakem arayüzüne veri göndermek için
         self.port_info_widget = PortInfoWidget("Port seçilmedi", "Port seçilmedi")
         self.port_info_widget.receiver_port_selected.connect(self._on_receiver_port_selected)
+        self.port_info_widget.transmitter_port_selected.connect(self._on_transmitter_port_selected)
         
         # Ana horizontal layout (Sol: Kontrol, Sağ: Container)
         main_horizontal_layout = QHBoxLayout()
@@ -83,8 +98,8 @@ class MainWindow(QMainWindow):
             }
         """)
         control_layout = QVBoxLayout(control_panel)
-        control_layout.setSpacing(15)
-        control_layout.setContentsMargins(15, 15, 15, 15)
+        control_layout.setSpacing(8)
+        control_layout.setContentsMargins(10, 10, 10, 10)
         
         # Kontrol başlığı
         control_title = QLabel("Kontrol")
@@ -96,13 +111,27 @@ class MainWindow(QMainWindow):
         self.simulator_control_widget.start_requested.connect(self.start_simulator)
         self.simulator_control_widget.stop_requested.connect(self.stop_simulator)
         
-        # Bağlantı kontrol widget'ı
-        self.connection_control_widget = ConnectionControlWidget(BUTTON_STYLES)
-        self.connection_control_widget.connect_requested.connect(self.start_serial_connection)
-        self.connection_control_widget.disconnect_requested.connect(self.stop_serial_connection)
+        # Alıcı Port Bağlantı Kontrolü
+        receiver_label = QLabel("📥 Alıcı Port Bağlantısı")
+        receiver_label.setStyleSheet("color: #e0e0e0; font-size: 11px; font-weight: bold;")
+        
+        self.receiver_connection_widget = ConnectionControlWidget(BUTTON_STYLES)
+        self.receiver_connection_widget.connect_requested.connect(self.start_serial_connection)
+        self.receiver_connection_widget.disconnect_requested.connect(self.stop_serial_connection)
+        
+        # Verici Port Bağlantı Kontrolü
+        transmitter_label = QLabel("📤 Verici Port Bağlantısı")
+        transmitter_label.setStyleSheet("color: #e0e0e0; font-size: 11px; font-weight: bold;")
+        
+        self.transmitter_connection_widget = ConnectionControlWidget(BUTTON_STYLES)
+        self.transmitter_connection_widget.connect_requested.connect(self.start_transmitter_connection)
+        self.transmitter_connection_widget.disconnect_requested.connect(self.stop_transmitter_connection)
         
         control_layout.addWidget(self.simulator_control_widget)
-        control_layout.addWidget(self.connection_control_widget)
+        control_layout.addWidget(receiver_label)
+        control_layout.addWidget(self.receiver_connection_widget)
+        control_layout.addWidget(transmitter_label)
+        control_layout.addWidget(self.transmitter_connection_widget)
         control_layout.addStretch()
         
         # Sağ panel: Boş container (%70)
@@ -151,6 +180,17 @@ class MainWindow(QMainWindow):
         self.selected_port = port
         print(f"Alıcı port seçildi: {port}")
     
+    def _on_transmitter_port_selected(self, port):
+        """
+        Verici port seçildiğinde çağrılır.
+        Artık otomatik bağlanmaz, kullanıcı manuel olarak bağlanmalı.
+        
+        Args:
+            port: Seçilen verici port adı
+        """
+        print(f"Verici port seçildi: {port}")
+        self.transmitter_manager.set_port(port)
+    
     def start_serial_connection(self):
         """
         Seri port bağlantısını başlatır (Manager üzerinden).
@@ -171,13 +211,31 @@ class MainWindow(QMainWindow):
         """
         self.serial_manager.stop_connection()
     
+    def start_transmitter_connection(self):
+        """
+        Verici port bağlantısını başlatır.
+        Port bilgisi port_info_widget'ten alınır.
+        """
+        port = self.port_info_widget.get_transmitter_port()
+        if not port:
+            print("Lütfen geçerli bir verici port seçin.")
+            return
+        
+        self.transmitter_manager.set_port(port)
+        self.transmitter_manager.start_transmission()
+    
+    def stop_transmitter_connection(self):
+        """
+        Verici port bağlantısını durdurur.
+        """
+        self.transmitter_manager.stop_transmission()
+    
     def on_connection_started(self):
         """
-        Bağlantı başladığında UI'yi günceller.
+        Alıcı port bağlantı başladığında UI'yi günceller.
         """
-        self.connection_control_widget.set_connected(True)
+        self.receiver_connection_widget.set_connected(True)
         self.port_info_widget.set_receiver_port_enabled(False)  # Bağlıyken alıcı port seçimini devre dışı bırak
-        # Verici port başka bilgisayara veri aktarımı için, bağlantı durumundan etkilenmez
         print("UI: Bağlantı kuruldu.")
         
         # Loglamayı başlat
@@ -185,11 +243,10 @@ class MainWindow(QMainWindow):
     
     def on_connection_stopped(self):
         """
-        Bağlantı durdurulduğunda UI'yi günceller.
+        Alıcı port bağlantı durdurulduğunda UI'yi günceller.
         """
-        self.connection_control_widget.set_connected(False)
+        self.receiver_connection_widget.set_connected(False)
         self.port_info_widget.set_receiver_port_enabled(True)  # Alıcı port seçimini tekrar etkinleştir
-        # Verici port başka bilgisayara veri aktarımı için, bağlantı durumundan etkilenmez
         print("UI: Bağlantı kesildi.")
         
         # Loglamayı durdur
@@ -198,10 +255,15 @@ class MainWindow(QMainWindow):
     def on_data_received(self, raw_data):
         """
         Manager'dan gelen ham veriyi parse eder ve UI'yi günceller.
+        Aynı zamanda hakem arayüzüne gönderir.
         
         Args:
             raw_data: Binary formatında ham veri (78 byte paket)
         """
+        # Hakem arayüzüne gönder (aynı binary format, parse edilmeden)
+        if self.transmitter_manager.is_transmitting():
+            self.transmitter_manager.send_data(raw_data)
+        
         # DataParser ile parse et
         telemetry = DataParser.parse(raw_data)
         
@@ -229,6 +291,29 @@ class MainWindow(QMainWindow):
         """
         print(f"UI HATA: {error_msg}")
         # Opsiyonel: Kullanıcıya hata mesajı gösterilebilir (QMessageBox)
+    
+    def handle_transmission_error(self, error_msg):
+        """
+        TransmitterManager'dan gelen hataları işler.
+        """
+        print(f"UI VERİCİ HATA: {error_msg}")
+        # Opsiyonel: Kullanıcıya hata mesajı gösterilebilir (QMessageBox)
+    
+    def on_transmission_started(self):
+        """
+        Verici bağlantı başladığında çağrılır.
+        """
+        self.transmitter_connection_widget.set_connected(True)
+        self.port_info_widget.set_transmitter_port_enabled(False)  # Bağlıyken verici port seçimini devre dışı bırak
+        print("UI: Verici bağlantı kuruldu.")
+    
+    def on_transmission_stopped(self):
+        """
+        Verici bağlantı durdurulduğunda çağrılır.
+        """
+        self.transmitter_connection_widget.set_connected(False)
+        self.port_info_widget.set_transmitter_port_enabled(True)  # Verici port seçimini tekrar etkinleştir
+        print("UI: Verici bağlantı kesildi.")
 
     def start_simulator(self):
         """
@@ -278,11 +363,16 @@ class MainWindow(QMainWindow):
         # Simülatör ve serial bağlantıyı temizle
         self.simulator_manager.cleanup()
         self.serial_manager.stop_connection()
+        self.transmitter_manager.stop_transmission()
         self.csv_logger.stop_logging()
         
-        # Manager'ın thread'ini bekle
+        # Manager'ların thread'lerini bekle
         if self.serial_manager.serial_thread:
             self.serial_manager.serial_thread.quit()
             self.serial_manager.serial_thread.wait(2000)
+        
+        if self.transmitter_manager.transmitter_thread:
+            self.transmitter_manager.transmitter_thread.quit()
+            self.transmitter_manager.transmitter_thread.wait(2000)
         
         event.accept()

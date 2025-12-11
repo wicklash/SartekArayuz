@@ -6,7 +6,7 @@ import serial
 import time
 import random
 import struct
-from src.core.config import SERIAL_PORT_ROCKET, BAUDRATE, TEAM_ID
+from src.core import config
 
 paket_sayac = 0  # Simülasyon için sayaç (sınırsız artar)
 packet_counter = 0  # Paket sayacı (0-255 döngüsel)
@@ -41,7 +41,12 @@ aci = 0.0
 # Durum ve Kontrol
 durum = 0  # 0: Beklemede, 1: Yükseliyor, 2: Tepe Noktası, 3: İniş
 
-print(f"Roket Simülatörü Başlatıldı. {SERIAL_PORT_ROCKET} portuna {BAUDRATE} baud rate ile yazılıyor.")
+# Simülatör Konfigürasyonu
+PORT = 'COM2'  # Simülatör portu (Sanal Port)
+BAUDRATE = config.RECEIVER_BAUDRATE
+TEAM_ID = config.TEAM_ID # Keep TEAM_ID from config
+
+print(f"Roket Simülatörü Başlatıldı. {PORT} portuna {BAUDRATE} baud rate ile yazılıyor.")
 print("Binary protokol formatında (78 byte) veri gönderiliyor.")
 print("Durdurmak için Ctrl+C.")
 
@@ -149,9 +154,9 @@ def create_binary_packet(team_id, counter, irtifa, roket_gps_irtifa, roket_enlem
 
 try:
     # Seriyal portu aç
-    ser = serial.Serial(SERIAL_PORT_ROCKET, BAUDRATE, timeout=1)
+    ser = serial.Serial(PORT, BAUDRATE, timeout=1)
 except serial.SerialException as e:
-    print(f"Hata: Port açılamadı ({SERIAL_PORT_ROCKET}). {e}")
+    print(f"Hata: Port açılamadı ({PORT}). {e}")
     print("com0com çalışıyor mu? Doğru portu seçtiniz mi?")
     exit()
 
@@ -234,12 +239,12 @@ try:
         checksum = binary_packet[75]
         print(f"Gönderildi: Paket #{packet_counter} (Sim: {paket_sayac}) | İrtifa: {irtifa:.2f}m | Durum: {durum} | Checksum: {checksum} | Boyut: {len(binary_packet)} byte")
 
-        # 24Hz (saniyede 24 kez) veri göndermek için bekle
-        time.sleep(1/24)
+        # 20Hz (saniyede 20 kez) veri göndermek için bekle - Stabil veri akışı için düşürüldü
+        time.sleep(1/15)
 
 except KeyboardInterrupt:
     print("\nSimülatör durduruldu.")
 finally:
     if ser.is_open:
         ser.close()
-        print(f"Port {SERIAL_PORT_ROCKET} kapatıldı.")
+        print(f"Port {PORT} kapatıldı.")

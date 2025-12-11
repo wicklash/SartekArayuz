@@ -29,7 +29,7 @@ class ConnectionControlWidget(QWidget):
         
         # Butonlar
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(10)
+        button_layout.setSpacing(5)
         
         self.connect_button = QPushButton("Bağlan")
         self.connect_button.setStyleSheet(self.button_styles['connect'])

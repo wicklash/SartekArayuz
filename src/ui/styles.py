@@ -11,12 +11,12 @@ MAIN_WINDOW_STYLE = """
         background-color: #3d3d3d;
         color: #e0e0e0;
         border: none;
-        padding: 10px 18px;
+        padding: 6px 12px;
         border-radius: 4px;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
-        min-width: 100px;
-        letter-spacing: 0.5px;
+        min-width: 70px;
+        letter-spacing: 0.3px;
         font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QPushButton:hover {
