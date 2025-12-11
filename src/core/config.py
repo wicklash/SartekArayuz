@@ -12,7 +12,7 @@ import serial.tools.list_ports
 # Seri Port Konfigürasyonu
 # Roket Simülatörü - Simülatörün yazacağı port
 # Not: GCS portu UI üzerinden kullanıcı tarafından seçilir
-SERIAL_PORT_ROCKET = 'COM2'
+SERIAL_PORT_ROCKET = 'COM9'
 
 # Haberleşme Hızı (Baud Rate)
 BAUDRATE = 19200
