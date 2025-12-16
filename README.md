@@ -54,21 +54,50 @@ SartekArayüz/
 └── simulator.py        # Test simülatörü
 ```
 
-## Telemetri Veri Formatı
 
-CSV formatında 21 alan:
-```
-TAKIM_ID,SAYAC,IRTIFA,ROKET_GPS_IRT,ROKET_ENLEM,ROKET_BOYLAM,
-GOREV_GPS_IRT,GOREV_ENLEM,GOREV_BOYLAM,KADEME_GPS_IRT,KADEME_ENLEM,KADEME_BOYLAM,
-JIRO_X,JIRO_Y,JIRO_Z,IVME_X,IVME_Y,IVME_Z,ACI,DURUM,CRC
+## İletişim Protokolü (Binary)
+
+Sistem, 78 byte uzunluğunda sabit bir veri paketi kullanır:
+
+| Byte | İçerik | Tip | Açıklama |
+|------|--------|-----|----------|
+| 0-3 | Header | - | `FF FF 54 52` |
+| 4 | Takım ID | UINT8 | Takım ID (Low Byte) |
+| 5 | Sayaç | UINT8 | 0-255 Döngüsel |
+| 6-73 | Payload | Float32 | *Aşağıdaki tabloya bakınız* |
+| 74 | Durum | UINT8 | 0:Bekle, 1:Yüksel, 2:Tepe, 3:İniş |
+| 75 | Checksum | UINT8 | Modulo 256 |
+| 76-77| Footer | - | `0D 0A` (\r\n) |
+
+**Payload (Float32 - Little Endian):**
+İrtifa, Roket GPS (İrt, Enl, Boy), Görev Yükü GPS (İrt, Enl, Boy), Kademe GPS (İrt, Enl, Boy), Jiro (X,Y,Z), İvme (X,Y,Z), Açı.
+
+## Log Dosyası Formatı (CSV)
+
+Uygulama verileri `logs/` klasörüne CSV formatında kaydeder:
+```csv
+Zaman,TakimID,Sayac,Irtifa,
+Roket_GPS_Irtifa,Roket_Enlem,Roket_Boylam,
+Gorev_GPS_Irtifa,Gorev_Enlem,Gorev_Boylam,
+Kademe_GPS_Irtifa,Kademe_Enlem,Kademe_Boylam,
+Jiro_X,Jiro_Y,Jiro_Z,
+Ivme_X,Ivme_Y,Ivme_Z,
+Aci,Durum,Durum_Metin,Checksum
 ```
 
 ## Konfigürasyon
 
-`main.py` içinde:
+Tüm ayarlar `src/core/config.py` dosyasında bulunur:
+
 ```python
-GCS_PORT = 'COM8'  # GCS dinleme portu
-BAUDRATE = 9600    # İletişim hızı
+# src/core/config.py
+
+# Seri Haberleşme Hızları
+RECEIVER_BAUDRATE = 19200    # Roketten gelen veri hızı
+TRANSMITTER_BAUDRATE = 19200 # Hakem sunucusuna giden veri hızı
+
+# Takım Ayarları
+TEAM_ID = 123456
 ```
 
 ## Lisans
