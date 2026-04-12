@@ -103,3 +103,13 @@ TEAM_ID = 123456
 ## Lisans
 
 MIT
+
+Görselleştirme ve Yer Kontrol Yazılımı
+Geliştirilen yer istasyonu arayüz yazılımı; Python tabanlı PyQt6 mimarisiyle, düşük gecikmeli veri işleme ve anlık görselleştirme odağında tasarlanmıştır. Yazılımın temel özellikleri şunlardır:
+
+Performanslı Grafikleme: PyQtGraph ve NumPy entegrasyonu ile irtifa ve sensör verileri gerçek zamanlı, yüksek FPS değerlerinde çizdirilir.
+
+Asenkron Veri Akışı: QThread yapısı sayesinde seri port (pyserial) okumaları arayüzden bağımsız yürütülerek donma yaşanması engellenir.
+
+Hata Denetimi ve Loglama: Gelen 78 byte'lık ham paketler data_parser ile çözümlenir, doğrulanır ve eşzamanlı olarak CSV formatında kaydedilir.
+
