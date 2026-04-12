@@ -11,28 +11,43 @@ Modern PyQt6 tabanlı yer kontrol istasyonu uygulaması.
 - 📝 Detaylı veri log penceresi
 - 🎨 Modern dark tema arayüz
 
-## Kurulum
+## 🛠 Kurulum Adımları
 
+Uygulamayı çalıştırmak için aşağıdaki adımları sırasıyla terminale/komut satırına yazmanız yeterlidir:
+
+**1. Adım: Sanal Ortam Oluşturun**
+Projenin bağımlılıklarını bilgisayarınızdaki diğer projelerden ayırmak için bir izolasyon alanı oluşturuyoruz:
 ```bash
-# Sanal ortam oluştur
 python -m venv .venv
+```
 
-# Sanal ortamı aktifleştir (Windows)
+**2. Adım: Sanal Ortamı Aktifleştirin**
+Oluşturduğumuz bu alanı kullanıma açıyoruz (Windows için):
+```bash
 .venv\Scripts\activate
+```
+*Not: Başarıyla bağlandığınızda terminal satırının başında `(.venv)` ifadesini görmelisiniz.*
 
-# Bağımlılıkları yükle
+**3. Adım: Gerekli Paketleri Yükleyin**
+Arayüzün ve araçların çalışması için gereken tüm kütüphaneleri otomatik olarak yüklüyoruz:
+```bash
 pip install -r requirements.txt
 ```
 
-## Kullanım
+## 🚀 Çalıştırma
 
-```bash
-# Uygulamayı başlat
-python main.py
+Kurulum tamamlandıktan sonra uygulamayı ve test simülatörünü başlatabilirsiniz:
 
-# Simülatörü ayrı bir terminalde çalıştır
-python simulator.py
-```
+1.  **Ana Arayüzü Başlatma:**
+    ```bash
+    python main.py
+    ```
+
+2.  **Test Simülatörünü Başlatma (Opsiyonel):**
+    Eğer elinizde fiziksel bir donanım yoksa, test verisi üretmek için ayrı bir terminal sekmesi açıp (ve orada da 2. adımı uygulayıp) şunu yazın:
+    ```bash
+    python simulator.py
+    ```
 
 ## Yapı
 

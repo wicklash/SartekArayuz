@@ -186,6 +186,16 @@ try:
         
         if irtifa < 0:
             irtifa = 0
+            
+        # Simülasyonu başa sar (Yere inince 2 saniye bekle ve sıfırla)
+        if irtifa == 0 and durum == 3:
+            print("--- Roket yere indi, simülasyon 2 saniye içinde yeniden başlayacak ---")
+            time.sleep(2)
+            paket_sayac = 0
+            irtifa = 0.0
+            roket_enlem = 39.9334
+            roket_boylam = 32.8597
+            print("--- Simülasyon yeniden başlatıldı ---")
         
         # GPS verileri (irtifa ile senkron)
         roket_gps_irtifa = irtifa + random.uniform(-2.0, 2.0)
