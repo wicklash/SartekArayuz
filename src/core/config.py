@@ -18,7 +18,7 @@ RECEIVER_BAUDRATE = 19200    # Roketten okuma hızı
 TRANSMITTER_BAUDRATE = 19200 # Hakem arayüzüne gönderme hızı
 
 # Takım Bilgileri
-TEAM_ID = 123456  # Takım numarası
+TEAM_ID = 1 # Takım numarası
 
 
 def get_available_ports():
