@@ -43,11 +43,6 @@ Kurulum tamamlandıktan sonra uygulamayı ve test simülatörünü başlatabilir
     python main.py
     ```
 
-2.  **Test Simülatörünü Başlatma (Opsiyonel):**
-    Eğer elinizde fiziksel bir donanım yoksa, test verisi üretmek için ayrı bir terminal sekmesi açıp (ve orada da 2. adımı uygulayıp) şunu yazın:
-    ```bash
-    python simulator.py
-    ```
 
 ## Yapı
 
