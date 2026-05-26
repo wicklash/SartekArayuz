@@ -158,6 +158,7 @@ try:
 except serial.SerialException as e:
     print(f"Hata: Port açılamadı ({PORT}). {e}")
     print("com0com çalışıyor mu? Doğru portu seçtiniz mi?")
+    input("\nKapatmak için Enter tuşuna basın...")
     exit()
 
 try:
@@ -254,7 +255,10 @@ try:
 
 except KeyboardInterrupt:
     print("\nSimülatör durduruldu.")
+except Exception as e:
+    print(f"\nBeklenmeyen bir hata oluştu: {e}")
+    input("\nKapatmak için Enter tuşuna basın...")
 finally:
-    if ser.is_open:
+    if 'ser' in locals() and ser.is_open:
         ser.close()
         print(f"Port {PORT} kapatıldı.")

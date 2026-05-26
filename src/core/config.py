@@ -7,6 +7,25 @@ Port numaraları, baud rate ve takım bilgileri gibi değerleri buradan değişt
 """
 
 import serial.tools.list_ports
+import os
+import sys
+
+
+def get_resource_path(relative_path):
+    """
+    Kaynak dosyanın tam yolunu döndürür.
+    PyInstaller ile paketlendiğinde geçici klasörü (_MEIPASS),
+    normal çalışma durumunda ise proje dizinini temel alır.
+    """
+    try:
+        # PyInstaller geçici klasörü
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # Normal Python çalışma ortamı (dosyanın bulunduğu yerin 2 seviye üstü yani proje kökü)
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    
+    return os.path.join(base_path, relative_path)
+
 
 
 # Seri Port Konfigürasyonu

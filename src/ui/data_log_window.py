@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QIcon
 from .telemetry_table_model import TelemetryTableModel
 from .styles import DATA_LOG_WINDOW_STYLE, TABLE_VIEW_STYLE, CLEAR_BUTTON_STYLE
+from ..core.config import get_resource_path
 
 
 class DataLogWindow(QMainWindow):
@@ -16,8 +17,7 @@ class DataLogWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Telemetri Veri Logları - Detaylı Görünüm")
-        self.setWindowIcon(QIcon("assets/icon.png"))
-        self.setGeometry(200, 200, 1000, 600)
+        self.setWindowIcon(QIcon(get_resource_path("assets/icon.ico")))
         self.setGeometry(200, 200, 1000, 600)
         
         # Model'i oluştur (veriler burada tutulacak)

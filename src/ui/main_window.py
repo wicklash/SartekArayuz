@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
         self.selected_port = None  # UI'den seçilecek port
         
         self.setWindowTitle("Sartek GCS - Roket Telemetri Sistemi")
-        self.setWindowIcon(QIcon("assets/icon.ico"))
+        self.setWindowIcon(QIcon(config.get_resource_path("assets/icon.ico")))
         self.resize(1200, 750)
         self.setMinimumSize(1000, 700)  # Minimum boyut ayarı
         
