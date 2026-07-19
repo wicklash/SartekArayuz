@@ -27,8 +27,8 @@ class MainWindow(QMainWindow):
         
         self.setWindowTitle("Sartek GCS - Roket Telemetri Sistemi")
         self.setWindowIcon(QIcon(config.get_resource_path("assets/icon.ico")))
-        self.resize(1200, 750)
-        self.setMinimumSize(1000, 700)  # Minimum boyut ayarı
+        self.resize(1300, 850)
+        self.setMinimumSize(1100, 750)  # Minimum boyut ayarı
         
         # Pencereyi ekranın ortasına yerleştir
         screen = QScreen.availableGeometry(self.screen())

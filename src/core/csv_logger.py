@@ -54,10 +54,10 @@ class CSVLogger:
             
             # Başlık satırını yaz
             headers = [
-                "Zaman", "TakimID", "Sayac", "Irtifa", 
+                "Zaman", "Nem", "Sayac", "Irtifa",
                 "Roket_GPS_Irtifa", "Roket_Enlem", "Roket_Boylam",
                 "Gorev_GPS_Irtifa", "Gorev_Enlem", "Gorev_Boylam",
-                "Kademe_GPS_Irtifa", "Kademe_Enlem", "Kademe_Boylam",
+                "GY_Basinc_Pa", "GY_Sicaklik_C", "GY_Hes_Irtifa", "GY_Hava_Yogunlugu",
                 "Jiro_X", "Jiro_Y", "Jiro_Z",
                 "Ivme_X", "Ivme_Y", "Ivme_Z",
                 "Aci", "Durum", "Durum_Metin", "Checksum"
@@ -124,7 +124,7 @@ class CSVLogger:
             
             row = [
                 current_time,
-                data.takim_id,
+                data.nem,
                 data.sayac,
                 f"{data.irtifa:.2f}",
                 f"{data.roket_gps_irtifa:.2f}",
@@ -133,9 +133,10 @@ class CSVLogger:
                 f"{data.gorev_gps_irtifa:.2f}",
                 f"{data.gorev_enlem:.6f}",
                 f"{data.gorev_boylam:.6f}",
-                f"{data.kademe_gps_irtifa:.2f}",
-                f"{data.kademe_enlem:.6f}",
-                f"{data.kademe_boylam:.6f}",
+                f"{data.gorev_basinc:.2f}",
+                f"{data.gorev_sicaklik:.2f}",
+                f"{data.gorev_hesaplanan_irtifa:.2f}",
+                f"{data.gorev_hava_yogunlugu:.4f}",
                 f"{data.jiroskop_x:.2f}",
                 f"{data.jiroskop_y:.2f}",
                 f"{data.jiroskop_z:.2f}",

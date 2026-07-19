@@ -55,7 +55,7 @@ class DataLogWindow(QMainWindow):
         
         # Sütun genişliklerini ayarla
         self.table.setColumnWidth(0, 50)  # Sıra numarası
-        for i in range(1, 22):
+        for i in range(1, 23):
             self.table.setColumnWidth(i, 100)
         
         # Header boyutlandırma
