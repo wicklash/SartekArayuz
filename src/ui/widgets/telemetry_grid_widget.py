@@ -18,7 +18,8 @@ class TelemetryGridWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.data_labels = {}  # Veri label'larını saklar
-        self.setMaximumHeight(520)  # Maksimum yükseklik 520px
+        self.setMinimumHeight(380)  # Minimum 380px
+        self.setMaximumHeight(480)  # Maksimum 480px
         self._setup_ui()
 
     def _setup_ui(self):
@@ -45,19 +46,18 @@ class TelemetryGridWidget(QWidget):
         """Tüm veri kartlarını oluşturur."""
         row = 0
 
-        # Satır 1: Genel Bilgiler | Roket GPS | Görev Yükü GPS | GY Ortam Verileri
-        self._add_multi_value_card("Genel Bilgiler",   ["sayac", "gorev_sayac", "irtifa", "durum"],           row, 0)
+        # Satır 1: Genel Bilgiler | Roket GPS | Görev Yükü GPS | GY Ortam Verileri (2 satır dikey kapsar)
+        self._add_multi_value_card("Genel Bilgiler",   ["sayac", "gorev_sayac", "irtifa", "durum", "crc"],  row, 0)
         self._add_multi_value_card("Roket GPS",        ["roket_gps_irtifa", "roket_enlem", "roket_boylam"],    row, 1)
         self._add_multi_value_card("Görev Yükü GPS",   ["gorev_gps_irtifa", "gorev_enlem", "gorev_boylam"],   row, 2)
-        self._add_multi_value_card("GY Ortam Verileri",["gorev_basinc", "gorev_sicaklik", "gorev_hesaplanan_irtifa", "nem_label"], row, 3)
+        self._add_multi_value_card("GY Ortam Verileri",["gorev_basinc", "gorev_sicaklik", "gorev_hesaplanan_irtifa", "nem_label"], row, 3, 2, 1)  # dikey 2 satır kapla
 
         row += 1
 
-        # Satır 2: Jiroskop | İvme | Açı | CRC
+        # Satır 2: Jiroskop | İvme | Açı (1 kolon)
         self._add_multi_value_card("Jiroskop", ["jiroskop_x", "jiroskop_y", "jiroskop_z"], row, 0)
         self._add_multi_value_card("İvme",     ["ivme_x", "ivme_y", "ivme_z"],             row, 1)
-        self._add_card("Açı",  "aci",      row, 2)
-        self._add_card("CRC",  "crc",      row, 3)
+        self._add_card("Açı",  "aci",      row, 2, 1, 1)  # Açı kartı 1 kolon genişliğinde
 
     def _add_card(self, title, key, row, col, rowspan=1, colspan=1):
         """
@@ -75,7 +75,7 @@ class TelemetryGridWidget(QWidget):
         card.setObjectName("data_card")
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(10, 8, 10, 8)   # Dengeli iç boşluk
-        card_layout.setSpacing(6)                    # Başlık ile değer arası dengeli boşluk
+        card_layout.setSpacing(4)                    # Başlık ile değer arası dengeli boşluk
         card_layout.setAlignment(Qt.AlignmentFlag.AlignTop)  # İçerikleri yukarı yasla
 
         # Başlık
@@ -85,7 +85,7 @@ class TelemetryGridWidget(QWidget):
 
         # Varsayılan metin — içeriğe göre
         if "Genel" in title:
-            default_text = "UKB Sayaç: -\nGY Sayaç: -\nİrtifa: -\nDurum: -"
+            default_text = "UKB Sayaç: -\nGY Sayaç: -\nİrtifa: -\nDurum: -\nCRC: -"
         elif "GPS" in title:
             default_text = "İrtifa: -\nEnlem: -\nBoylam: -"
         elif "Ortam" in title:
@@ -115,7 +115,7 @@ class TelemetryGridWidget(QWidget):
         card.setObjectName("data_card")
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(10, 8, 10, 8)   # Dengeli iç boşluk
-        card_layout.setSpacing(6)                    # Başlık ile değer arası dengeli boşluk
+        card_layout.setSpacing(4)                    # Başlık ile değer arası dengeli boşluk
         card_layout.setAlignment(Qt.AlignmentFlag.AlignTop)  # İçerikleri yukarı yasla
 
         title_label = QLabel(title)
@@ -123,7 +123,7 @@ class TelemetryGridWidget(QWidget):
 
         value_label = QLabel("-")
         value_label.setObjectName("single_data_value")
-        value_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Tekli değerleri ortala
         card_layout.addWidget(title_label)
         card_layout.addWidget(value_label)
 
@@ -137,11 +137,12 @@ class TelemetryGridWidget(QWidget):
         Args:
             telemetry_data: TelemetryData nesnesi
         """
-        # Genel Bilgiler (UKB Sayaç & GY Sayaç ekli)
+        # Genel Bilgiler (UKB Sayaç, GY Sayaç, İrtifa, Durum, CRC)
         genel_text = (f"UKB Sayaç: {telemetry_data.sayac}\n"
                       f"GY Sayaç: {telemetry_data.gorev_sayac}\n"
                       f"İrtifa: {telemetry_data.get_formatted_irtifa()}\n"
-                      f"Durum: {telemetry_data.durum_text}")
+                      f"Durum: {telemetry_data.durum_text}\n"
+                      f"CRC: {telemetry_data.checksum}")
         self.data_labels['sayac'].setText(genel_text)
 
         # Roket GPS
@@ -156,7 +157,7 @@ class TelemetryGridWidget(QWidget):
                           f"Boylam: {telemetry_data.get_formatted_coordinate(telemetry_data.gorev_boylam)}")
         self.data_labels['gorev_gps_irtifa'].setText(gorev_gps_text)
 
-        # GY Ortam Verileri (Yeni kart - Basınç, Sıcaklık, Nem, Hesaplanan İrtifa, Yoğunluk)
+        # GY Ortam Verileri (Satır satır ayrı: Hes. İrtifa, Basınç, Sıcaklık, Nem, Yoğunluk)
         ortam_text = (f"Hes. İrtifa: {telemetry_data.get_formatted_calculated_altitude()}\n"
                       f"Basınç: {telemetry_data.get_formatted_pressure()}\n"
                       f"Sıcaklık: {telemetry_data.get_formatted_temperature()}\n"
@@ -178,6 +179,3 @@ class TelemetryGridWidget(QWidget):
 
         # Açı
         self.data_labels['aci'].setText(telemetry_data.get_formatted_angle(telemetry_data.aci))
-
-        # CRC / Checksum
-        self.data_labels['crc'].setText(str(telemetry_data.checksum))

@@ -27,8 +27,8 @@ class MainWindow(QMainWindow):
         
         self.setWindowTitle("Sartek GCS - Roket Telemetri Sistemi")
         self.setWindowIcon(QIcon(config.get_resource_path("assets/icon.ico")))
-        self.resize(1300, 850)
-        self.setMinimumSize(1100, 750)  # Minimum boyut ayarı
+        self.resize(1300, 920)
+        self.setMinimumSize(1100, 800)  # Minimum boyut ayarı
         
         # Pencereyi ekranın ortasına yerleştir
         screen = QScreen.availableGeometry(self.screen())
@@ -163,10 +163,9 @@ class MainWindow(QMainWindow):
         
         # Widget'ları layout'a ekle
         self.layout.addWidget(self.port_info_widget)
-        self.layout.addLayout(main_horizontal_layout, 3)  # Grafik satırına 3x ağırlık
-        self.layout.addWidget(self.telemetry_grid_widget, 1)  # Telemetri 1x ağırlık
-        self.layout.addWidget(self.data_log_widget)  # Data log
-        self.layout.addStretch()
+        self.layout.addLayout(main_horizontal_layout, 2)  # Grafik satırı
+        self.layout.addWidget(self.telemetry_grid_widget, 0)  # Telemetri kartları
+        self.layout.addWidget(self.data_log_widget, 0)  # Data log
         
         self.setCentralWidget(self.central_widget)
 
