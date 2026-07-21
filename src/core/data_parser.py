@@ -1,7 +1,7 @@
 # data_parser.py
 # Telemetri verisi parse mantığı
-# Binary protokol formatını parse eder (78 byte)
-# main.c'deki paketle_gonder() fonksiyonuna göre güncellenmiştir.
+# Binary protokol formatını parse eder (75 byte)
+# Yeni paket formatına göre güncellenmiştir (2026-07-21).
 
 import struct
 import math
@@ -11,22 +11,43 @@ from typing import Optional
 class TelemetryData:
     """
     Telemetri veri modeli.
-    main.c'deki yeni paket formatına göre güncellenmiştir:
-    - Byte 4: Takım ID yerine Nem (uint8, %)
-    - Byte 34-37: Kademe İrtifa yerine GY BME280 Basınç (float32, Pa)
-    - Byte 38-41: Kademe Enlem yerine GY Sıcaklık (float32, °C)
-    - Byte 42-45: Kullanılmıyor (0.0)
-    - gorev_hesaplanan_irtifa: Basınç ve sıcaklıktan hesaplanan barometrik irtifa (m)
+    Yeni 75 byte'lık paket formatına göre güncellenmiştir (2026-07-21):
+
+    Paket yapısı:
+    - Header   [0-3]  : 0xFF, 0xFF, 0x54, 0x52
+    - İrtifa   [4-7]  : float32 (Roket)
+    - GPS İrt. [8-11] : float32 (Roket)
+    - Enlem    [12-15]: float32 (Roket)
+    - Boylam   [16-19]: float32 (Roket)
+    - Jiro X   [20-23]: float32
+    - Jiro Y   [24-27]: float32
+    - Jiro Z   [28-31]: float32
+    - İvme X   [32-35]: float32
+    - İvme Y   [36-39]: float32
+    - İvme Z   [40-43]: float32
+    - Açı      [44-47]: float32
+    - Durum    [48]   : uint8
+    - UKB Say. [49]   : uint8
+    - GY Basın.[50-53]: float32 (Pa)
+    - GY GPS   [54-57]: float32
+    - GY Enlem [58-61]: float32
+    - GY Boylam[62-65]: float32
+    - GY Sıcak.[66-69]: float32 (°C)
+    - GY Nem   [70]   : uint8 (%)
+    - GY Sayaç [71]   : uint8
+    - Checksum [72]   : uint8  (sum(byte[4..71]) % 256)
+    - Footer   [73-74]: 0x0D, 0x0A
+
     Veriler saf sayı (float/int) olarak tutulur.
     Birim ekleme işi UI katmanında yapılır (performans için).
     """
 
     def __init__(self):
-        # Sayaç
+        # UKB Sayacı (Byte 49)
         self.sayac: int = 0
 
-        # Nem (Byte 4 - Takım ID yerine)
-        self.nem: int = 0
+        # Görev Yükü Sayacı (Byte 71)
+        self.gorev_sayac: int = 0
 
         # İrtifa (saf float) - Roket ana kartından (UKB)
         self.irtifa: float = 0.0
@@ -42,10 +63,12 @@ class TelemetryData:
         self.gorev_boylam: float = 0.0
 
         # Görev Yükü Ortam Verileri (BME280)
-        # Byte 34-37: Basınç (Pa)
+        # Byte 50-53: Basınç (Pa)
         self.gorev_basinc: float = 0.0
-        # Byte 38-41: Sıcaklık (°C)
+        # Byte 66-69: Sıcaklık (°C)
         self.gorev_sicaklik: float = 0.0
+        # Byte 70: Nem (%)
+        self.nem: int = 0
         # Barometrik formülle hesaplanan irtifa (m)
         self.gorev_hesaplanan_irtifa: float = 0.0
         # Basınç ve sıcaklıktan hesaplanan hava yoğunluğu (kg/m³)
@@ -117,33 +140,32 @@ class TelemetryData:
 class DataParser:
     """
     Binary protokol formatındaki telemetri verisini parse eder.
-    main.c'deki paketle_gonder() fonksiyonuna göre güncellenmiştir.
+    Yeni 75 byte'lık paket formatına göre güncellenmiştir (2026-07-21).
 
-    Protokol yapısı (78 byte):
-    - Header (0-3): 0xFF, 0xFF, 0x54, 0x52
-    - Nem (4): UINT8 (Takım ID yerine nem yazılıyor - main.c L150)
-    - Sayaç (5): UINT8
-    - Payload (6-73): Float32 değerler (Little Endian)
-        - [6-9]   İrtifa (UKB[0-3])
-        - [10-13] Roket GPS İrtifa (UKB[4-7])
-        - [14-17] Roket Enlem (UKB[8-11])
-        - [18-21] Roket Boylam (UKB[12-15])
-        - [22-25] Görev Yükü GPS İrtifa (Gorev[4-7])
-        - [26-29] Görev Yükü Enlem (Gorev[8-11])
-        - [30-33] Görev Yükü Boylam (Gorev[12-15])
-        - [34-37] GY BME280 Basınç/Pa (Gorev[0-3]) - main.c L134-135
-        - [38-41] GY Sıcaklık/°C (Gorev[16-19]) - main.c L146-147
-        - [42-45] Kullanılmıyor (0.0)
-        - [46-49] Jiroskop X (UKB[16-19])
-        - [50-53] Jiroskop Y (UKB[20-23])
-        - [54-57] Jiroskop Z (UKB[24-27])
-        - [58-61] İvme X (UKB[28-31])
-        - [62-65] İvme Y (UKB[32-35])
-        - [66-69] İvme Z (UKB[36-39])
-        - [70-73] Açı (UKB[40-43])
-    - Durum (74): UINT8
-    - Checksum (75): Byte 4-74 arası toplamın mod 256
-    - Footer (76-77): 0x0D, 0x0A
+    Protokol yapısı (75 byte):
+    - Header    [0-3]  : 0xFF, 0xFF, 0x54, 0x52
+    - İrtifa    [4-7]  : float32 (Roket)
+    - GPS İrt.  [8-11] : float32 (Roket)
+    - Enlem     [12-15]: float32 (Roket)
+    - Boylam    [16-19]: float32 (Roket)
+    - Jiro X    [20-23]: float32
+    - Jiro Y    [24-27]: float32
+    - Jiro Z    [28-31]: float32
+    - İvme X    [32-35]: float32
+    - İvme Y    [36-39]: float32
+    - İvme Z    [40-43]: float32
+    - Açı       [44-47]: float32
+    - Durum     [48]   : uint8
+    - UKB Say.  [49]   : uint8
+    - GY Basınç [50-53]: float32 (Pa)
+    - GY GPS    [54-57]: float32
+    - GY Enlem  [58-61]: float32
+    - GY Boylam [62-65]: float32
+    - GY Sıcak. [66-69]: float32 (°C)
+    - GY Nem    [70]   : uint8 (%)
+    - GY Sayaç  [71]   : uint8
+    - Checksum  [72]   : uint8  — sum(byte[4..71]) % 256
+    - Footer    [73-74]: 0x0D, 0x0A
     """
 
     # Header bytes
@@ -151,14 +173,20 @@ class DataParser:
     # Footer bytes
     FOOTER = bytes([0x0D, 0x0A])
     # Paket boyutu
-    PACKET_SIZE = 78
+    PACKET_SIZE = 75
 
-    # Durum kod çevirileri
+    # Checksum byte aralığı
+    CHECKSUM_START = 4
+    CHECKSUM_END   = 72  # sum(packet[4:72]) % 256
+
+    # Durum kod çevirileri (roket_durum_t)
     DURUM_MAP = {
-        0: "Beklemede",
-        1: "Yükseliyor",
-        2: "Tepe Noktası",
-        3: "İniş"
+        0: "Uçuşa Hazırlık",
+        1: "Uçuş",
+        2: "Apogee",
+        3: "1. Ayrılma",
+        4: "2. Ayrılma",
+        5: "İniş"
     }
 
     # Barometrik irtifa formül sabitleri
@@ -209,7 +237,7 @@ class DataParser:
         Binary formatındaki veriyi parse eder.
 
         Args:
-            raw_data: Binary formatında ham veri (78 byte)
+            raw_data: Binary formatında ham veri (75 byte)
 
         Returns:
             TelemetryData nesnesi veya hata durumunda None
@@ -225,111 +253,97 @@ class DataParser:
                 print(f"Parse hatası: Geçersiz header. Beklenen: {DataParser.HEADER.hex()}, Alınan: {raw_data[0:4].hex()}")
                 return None
 
-            # Footer kontrolü
-            if raw_data[76:78] != DataParser.FOOTER:
-                print(f"Parse hatası: Geçersiz footer. Beklenen: {DataParser.FOOTER.hex()}, Alınan: {raw_data[76:78].hex()}")
+            # Footer kontrolü [73-74]
+            if raw_data[73:75] != DataParser.FOOTER:
+                print(f"Parse hatası: Geçersiz footer. Beklenen: {DataParser.FOOTER.hex()}, Alınan: {raw_data[73:75].hex()}")
                 return None
 
-            # Checksum kontrolü
-            calculated_checksum = sum(raw_data[4:75]) % 256
-            received_checksum = raw_data[75]
+            # Checksum kontrolü — sum(byte[4..71]) % 256
+            calculated_checksum = sum(raw_data[DataParser.CHECKSUM_START:DataParser.CHECKSUM_END]) % 256
+            received_checksum = raw_data[72]
             if calculated_checksum != received_checksum:
                 print(f"Parse hatası: Checksum uyuşmazlığı. Hesaplanan: {calculated_checksum}, Alınan: {received_checksum}")
                 return None
 
             data = TelemetryData()
 
-            # Nem (Byte 4) - main.c L150: TAKIM ID yerine nem yazılıyor
-            data.nem = raw_data[4]
+            # --- UKB Verileri ---
 
-            # Sayaç (Byte 5)
-            data.sayac = raw_data[5]
+            # Roket İrtifa [4-7]
+            data.irtifa = struct.unpack('<f', raw_data[4:8])[0]
 
-            # Payload (Byte 6-73): Float32 değerler (Little Endian)
-            offset = 6
+            # Roket GPS İrtifa [8-11]
+            data.roket_gps_irtifa = struct.unpack('<f', raw_data[8:12])[0]
 
-            # İrtifa [6-9] - UKB[0-3]
-            data.irtifa = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # Roket Enlem [12-15]
+            data.roket_enlem = struct.unpack('<f', raw_data[12:16])[0]
 
-            # Roket GPS İrtifa [10-13] - UKB[4-7]
-            data.roket_gps_irtifa = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # Roket Boylam [16-19]
+            data.roket_boylam = struct.unpack('<f', raw_data[16:20])[0]
 
-            # Roket Enlem [14-17] - UKB[8-11]
-            data.roket_enlem = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # Jiroskop X [20-23]
+            data.jiroskop_x = struct.unpack('<f', raw_data[20:24])[0]
 
-            # Roket Boylam [18-21] - UKB[12-15]
-            data.roket_boylam = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # Jiroskop Y [24-27]
+            data.jiroskop_y = struct.unpack('<f', raw_data[24:28])[0]
 
-            # Görev Yükü GPS İrtifa [22-25] - Gorev[4-7]
-            data.gorev_gps_irtifa = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # Jiroskop Z [28-31]
+            data.jiroskop_z = struct.unpack('<f', raw_data[28:32])[0]
 
-            # Görev Yükü Enlem [26-29] - Gorev[8-11]
-            data.gorev_enlem = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # İvme X [32-35]
+            data.ivme_x = struct.unpack('<f', raw_data[32:36])[0]
 
-            # Görev Yükü Boylam [30-33] - Gorev[12-15]
-            data.gorev_boylam = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # İvme Y [36-39]
+            data.ivme_y = struct.unpack('<f', raw_data[36:40])[0]
 
-            # GY BME280 Basınç [34-37] - Gorev[0-3] (main.c L134-135: "kademe irtifaya yaziliyor")
-            data.gorev_basinc = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # İvme Z [40-43]
+            data.ivme_z = struct.unpack('<f', raw_data[40:44])[0]
 
-            # GY Sıcaklık [38-41] - Gorev[16-19] (main.c L146-147: "kademe enleme yaziliyor")
-            data.gorev_sicaklik = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
+            # Roket Açı [44-47]
+            data.aci = struct.unpack('<f', raw_data[44:48])[0]
 
-            # [42-45] Kullanılmıyor (Eski Kademe Boylam slotu, main.c'de yazılmıyor)
-            offset += 4
-
-            # Jiroskop X [46-49] - UKB[16-19]
-            data.jiroskop_x = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
-
-            # Jiroskop Y [50-53] - UKB[20-23]
-            data.jiroskop_y = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
-
-            # Jiroskop Z [54-57] - UKB[24-27]
-            data.jiroskop_z = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
-
-            # İvme X [58-61] - UKB[28-31]
-            data.ivme_x = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
-
-            # İvme Y [62-65] - UKB[32-35]
-            data.ivme_y = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
-
-            # İvme Z [66-69] - UKB[36-39]
-            data.ivme_z = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
-
-            # Açı [70-73] - UKB[40-43]
-            data.aci = struct.unpack('<f', raw_data[offset:offset+4])[0]
-            offset += 4
-
-            # Durum (Byte 74) - UKB[44]
-            data.durum = raw_data[74]
+            # Roket Durum [48]
+            data.durum = raw_data[48]
             data.durum_text = DataParser.DURUM_MAP.get(data.durum, str(data.durum))
 
-            # Checksum (Byte 75)
+            # UKB Sayacı [49]
+            data.sayac = raw_data[49]
+
+            # --- Görev Yükü Verileri ---
+
+            # GY Basınç [50-53] (Pa)
+            data.gorev_basinc = struct.unpack('<f', raw_data[50:54])[0]
+
+            # GY GPS İrtifa [54-57]
+            data.gorev_gps_irtifa = struct.unpack('<f', raw_data[54:58])[0]
+
+            # GY Enlem [58-61]
+            data.gorev_enlem = struct.unpack('<f', raw_data[58:62])[0]
+
+            # GY Boylam [62-65]
+            data.gorev_boylam = struct.unpack('<f', raw_data[62:66])[0]
+
+            # GY Sıcaklık [66-69] (°C)
+            data.gorev_sicaklik = struct.unpack('<f', raw_data[66:70])[0]
+
+            # GY Nem [70] (%)
+            data.nem = raw_data[70]
+
+            # GY Sayacı [71]
+            data.gorev_sayac = raw_data[71]
+
+            # Checksum [72]
             data.checksum = received_checksum
+
+            # --- Türetilmiş Hesaplamalar ---
 
             # Barometrik irtifa hesapla (Görev Yükü için)
             data.gorev_hesaplanan_irtifa = DataParser._calculate_barometric_altitude(
                 data.gorev_basinc, data.gorev_sicaklik
             )
 
-            # Hava yoğunluğunu hesapla: rho = P / (R * T)
+            # Hava yoğunluğunu hesapla: rho = P / (R_hava * T_kelvin)
             # R_hava = 287.0 J/(kg·K)
-            # T_kelvin = T_celsius + 273.15
             t_kelvin = data.gorev_sicaklik + 273.15
             if t_kelvin <= 0:
                 data.gorev_hava_yogunlugu = 0.0

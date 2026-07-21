@@ -1,6 +1,6 @@
 # serial_worker.py
 # Seri port okuma işlemleri için Worker sınıfı
-# Binary protokol formatında (78 byte) veri okur
+# Binary protokol formatında (75 byte) veri okur
 
 import serial
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -9,7 +9,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 class SerialWorker(QObject):
     """
     GUI'yi bloke etmemek için ayrı bir thread'de seri port okuması yapar.
-    Binary protokol formatında (78 byte) paketler okur.
+    Binary protokol formatında (75 byte) paketler okur.
     """
     # GUI thread'ine göndermek için sinyaller
     data_received = pyqtSignal(bytes)  # Gelen veriyi (bytes) gönderir
@@ -23,7 +23,7 @@ class SerialWorker(QObject):
         self.is_running = False
         self.ser = None
         self.buffer = bytearray()  # Gelen verileri buffer'da biriktir
-        self.PACKET_SIZE = 78
+        self.PACKET_SIZE = 75
         self.HEADER = bytes([0xFF, 0xFF, 0x54, 0x52])
 
     def run(self):

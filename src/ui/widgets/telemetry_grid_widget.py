@@ -18,7 +18,7 @@ class TelemetryGridWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.data_labels = {}  # Veri label'larını saklar
-        self.setMaximumHeight(450)  # Maksimum yükseklik 450px
+        self.setMaximumHeight(520)  # Maksimum yükseklik 520px
         self._setup_ui()
 
     def _setup_ui(self):
@@ -46,7 +46,7 @@ class TelemetryGridWidget(QWidget):
         row = 0
 
         # Satır 1: Genel Bilgiler | Roket GPS | Görev Yükü GPS | GY Ortam Verileri
-        self._add_multi_value_card("Genel Bilgiler",   ["sayac", "irtifa", "durum"],           row, 0)
+        self._add_multi_value_card("Genel Bilgiler",   ["sayac", "gorev_sayac", "irtifa", "durum"],           row, 0)
         self._add_multi_value_card("Roket GPS",        ["roket_gps_irtifa", "roket_enlem", "roket_boylam"],    row, 1)
         self._add_multi_value_card("Görev Yükü GPS",   ["gorev_gps_irtifa", "gorev_enlem", "gorev_boylam"],   row, 2)
         self._add_multi_value_card("GY Ortam Verileri",["gorev_basinc", "gorev_sicaklik", "gorev_hesaplanan_irtifa", "nem_label"], row, 3)
@@ -74,8 +74,8 @@ class TelemetryGridWidget(QWidget):
         card = QFrame()
         card.setObjectName("data_card")
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(8, 6, 8, 6)   # Dengeli iç boşluk
-        card_layout.setSpacing(4)                    # Başlık ile değer arası dengeli boşluk
+        card_layout.setContentsMargins(10, 8, 10, 8)   # Dengeli iç boşluk
+        card_layout.setSpacing(6)                    # Başlık ile değer arası dengeli boşluk
         card_layout.setAlignment(Qt.AlignmentFlag.AlignTop)  # İçerikleri yukarı yasla
 
         # Başlık
@@ -85,7 +85,7 @@ class TelemetryGridWidget(QWidget):
 
         # Varsayılan metin — içeriğe göre
         if "Genel" in title:
-            default_text = "Paket: -\nİrtifa: -\nDurum: -"
+            default_text = "UKB Sayaç: -\nGY Sayaç: -\nİrtifa: -\nDurum: -"
         elif "GPS" in title:
             default_text = "İrtifa: -\nEnlem: -\nBoylam: -"
         elif "Ortam" in title:
@@ -96,7 +96,6 @@ class TelemetryGridWidget(QWidget):
         value_label = QLabel(default_text)
         value_label.setObjectName("data_value")
         value_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-        value_label.setStyleSheet("font-size: 13px; line-height: 1.3;")
         card_layout.addWidget(value_label)
 
         self.data_grid.addWidget(card, row, col, rowspan, colspan)
@@ -115,19 +114,16 @@ class TelemetryGridWidget(QWidget):
         card = QFrame()
         card.setObjectName("data_card")
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(8, 6, 8, 6)   # Dengeli iç boşluk
-        card_layout.setSpacing(4)                    # Başlık ile değer arası dengeli boşluk
+        card_layout.setContentsMargins(10, 8, 10, 8)   # Dengeli iç boşluk
+        card_layout.setSpacing(6)                    # Başlık ile değer arası dengeli boşluk
         card_layout.setAlignment(Qt.AlignmentFlag.AlignTop)  # İçerikleri yukarı yasla
 
         title_label = QLabel(title)
         title_label.setObjectName("data_title")
 
         value_label = QLabel("-")
-        value_label.setObjectName("data_value")
+        value_label.setObjectName("single_data_value")
         value_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-        # Tekli değerler için font boyutu 18px (sola dayalı)
-        value_label.setStyleSheet("font-size: 18px; font-weight: 600; color: #00ff00; padding-top: 2px;")
-
         card_layout.addWidget(title_label)
         card_layout.addWidget(value_label)
 
@@ -141,8 +137,9 @@ class TelemetryGridWidget(QWidget):
         Args:
             telemetry_data: TelemetryData nesnesi
         """
-        # Genel Bilgiler (Takım ID kaldırıldı)
-        genel_text = (f"Paket: {telemetry_data.sayac}\n"
+        # Genel Bilgiler (UKB Sayaç & GY Sayaç ekli)
+        genel_text = (f"UKB Sayaç: {telemetry_data.sayac}\n"
+                      f"GY Sayaç: {telemetry_data.gorev_sayac}\n"
                       f"İrtifa: {telemetry_data.get_formatted_irtifa()}\n"
                       f"Durum: {telemetry_data.durum_text}")
         self.data_labels['sayac'].setText(genel_text)

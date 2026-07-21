@@ -75,7 +75,7 @@ Sistem, 78 byte uzunluğunda sabit bir veri paketi kullanır:
 | 4 | Takım ID | UINT8 | Takım ID (Low Byte) |
 | 5 | Sayaç | UINT8 | 0-255 Döngüsel |
 | 6-73 | Payload | Float32 | *Aşağıdaki tabloya bakınız* |
-| 74 | Durum | UINT8 | 0:Bekle, 1:Yüksel, 2:Tepe, 3:İniş |
+| 74 | Durum | UINT8 | 0:Uçuşa Hazırlık, 1:Uçuş, 2:Apogee, 3:1.Ayrılma, 4:2.Ayrılma, 5:İniş |
 | 75 | Checksum | UINT8 | Modulo 256 |
 | 76-77| Footer | - | `0D 0A` (\r\n) |
 

@@ -58,9 +58,8 @@ class DataLogWidget(QWidget):
         """
         if isinstance(data, TelemetryData):
             # Parse edilmiş telemetri verisi - okunabilir format
-            log_line = (f"[#{data.sayac}] Takım: {data.takim_id} | "
+            log_line = (f"[UKB:#{data.sayac} | GY:#{data.gorev_sayac}] Durum: {data.durum_text} | "
                        f"İrtifa: {data.get_formatted_irtifa()} | "
-                       f"Durum: {data.durum_text} | "
                        f"Roket GPS: {data.get_formatted_gps_irtifa(data.roket_gps_irtifa)} | "
                        f"Checksum: {data.checksum}")
             self.log_text.append(log_line)

@@ -54,17 +54,24 @@ MAIN_WINDOW_STYLE = """
         font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QLabel#data_title {
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 700;
         color: #ffffff;
         padding: 2px;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.4px;
         text-transform: uppercase;
         font-family: 'Aptos Display', 'Segoe UI', sans-serif;
     }
     QLabel#data_value {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 600;
+        color: #00ff00;
+        padding: 2px;
+        font-family: 'Aptos Display', 'Segoe UI', sans-serif;
+    }
+    QLabel#single_data_value {
+        font-size: 26px;
+        font-weight: 700;
         color: #00ff00;
         padding: 2px;
         font-family: 'Aptos Display', 'Segoe UI', sans-serif;

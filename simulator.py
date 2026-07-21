@@ -1,7 +1,7 @@
 # simulator.py
 # Bu betik, roketin telemetri verisini simüle eder.
-# Binary protokol formatında (78 byte) veri gönderir.
-# main.c'deki paketle_gonder() yeni paket formatına göre güncellenmiştir.
+# Binary protokol formatında (75 byte) veri gönderir.
+# Yeni paket formatına göre güncellenmiştir (2026-07-21).
 
 import serial
 import time
@@ -11,7 +11,8 @@ import math
 from src.core import config
 
 paket_sayac = 0   # Simülasyon için sayaç (sınırsız artar)
-packet_counter = 0  # Paket sayacı (0-255 döngüsel)
+packet_counter = 0   # UKB paket sayaçı (0-255 döngüsel)
+gorev_packet_counter = 0  # Görev yükü paket sayaçı (0-255 döngüsel)
 
 # Barometrik veri (Roket Ana Kart - UKB)
 irtifa = 0.0
@@ -40,61 +41,68 @@ gorev_basinc    = 101325.0   # Pa cinsinden (deniz seviyesi ~101325 Pa)
 gorev_sicaklik  = 25.0       # °C cinsinden
 nem             = 50         # % cinsinden (uint8, Byte 4)
 
-# Durum ve Kontrol
-durum = 0  # 0: Beklemede, 1: Yükseliyor, 2: Tepe Noktası, 3: İniş
+# Durum ve Kontrol (roket_durum_t: 0:Uçuşa Hazırlık, 1:Uçuş, 2:Apogee, 3:1.Ayrılma, 4:2.Ayrılma, 5:İniş)
+durum = 0
 
 # Simülatör Konfigürasyonu
 PORT = 'COM2'
 BAUDRATE = config.RECEIVER_BAUDRATE
 
-print(f"Roket Simülatörü Başlatıldı. {PORT} portuna {BAUDRATE} baud rate ile yazılıyor.")
-print("Binary protokol formatında (78 byte) veri gönderiliyor.")
-print("main.c yeni paket formatı kullanılıyor:")
-print("  Byte 4  : Nem (%)")
-print("  Byte 34 : GY BME280 Basınç (Pa)")
-print("  Byte 38 : GY Sıcaklık (°C)")
+print(f"Roket Simülasörü Başlatıldı. {PORT} portuna {BAUDRATE} baud rate ile yazılıyor.")
+print("Binary protokol formatında (75 byte) veri gönderiliyor.")
+print("Yeni paket formatı (2026-07-21):")
+print("  Byte 0-3  : Header (FF FF 54 52)")
+print("  Byte 4-47 : UKB Verileri (İrtifa, GPS, IMU, Açı)")
+print("  Byte 48   : Roket Durum")
+print("  Byte 49   : UKB Sayaçı")
+print("  Byte 50-69: Görev Yükü Verileri (Basınç, GPS, Sıcaklık)")
+print("  Byte 70   : GY Nem")
+print("  Byte 71   : GY Sayaçı")
+print("  Byte 72   : Checksum")
+print("  Byte 73-74: Footer (0D 0A)")
 print("Durdurmak için Ctrl+C.")
 
 
-def create_binary_packet(nem_yuzde, counter, irtifa,
+def create_binary_packet(ukb_sayac, gorev_sayac, irtifa,
                          roket_gps_irtifa, roket_enlem, roket_boylam,
-                         gorev_gps_irtifa, gorev_enlem, gorev_boylam,
-                         gorev_basinc_pa, gorev_sicaklik_c,
                          jiroskop_x, jiroskop_y, jiroskop_z,
-                         ivme_x, ivme_y, ivme_z, aci, durum):
+                         ivme_x, ivme_y, ivme_z, aci, durum,
+                         gorev_basinc_pa, gorev_gps_irtifa,
+                         gorev_enlem, gorev_boylam, gorev_sicaklik_c,
+                         nem_yuzde):
     """
-    78 byte uzunluğunda binary paket oluşturur.
-    main.c paketle_gonder() fonksiyonunu birebir taklit eder.
+    75 byte uzunluğunda binary paket oluşturur.
+    Yeni paket formatına göre (2026-07-21).
 
     Paket yapısı:
     [0-3]   Header: FF FF 54 52
-    [4]     Nem (%) - UINT8      (main.c L150: TAKIM ID yerine nem)
-    [5]     Sayaç - UINT8
-    [6-9]   İrtifa - Float32     (UKB[0-3])
-    [10-13] Roket GPS İrtifa     (UKB[4-7])
-    [14-17] Roket Enlem          (UKB[8-11])
-    [18-21] Roket Boylam         (UKB[12-15])
-    [22-25] GY GPS İrtifa        (Gorev[4-7])
-    [26-29] GY GPS Enlem         (Gorev[8-11])
-    [30-33] GY GPS Boylam        (Gorev[12-15])
-    [34-37] GY BME280 Basınç(Pa) (Gorev[0-3]) - main.c L134-135
-    [38-41] GY Sıcaklık (°C)    (Gorev[16-19]) - main.c L146-147
-    [42-45] Kullanılmıyor (0.0) - main.c'de yazılmıyor
-    [46-49] Jiroskop X           (UKB[16-19])
-    [50-53] Jiroskop Y           (UKB[20-23])
-    [54-57] Jiroskop Z           (UKB[24-27])
-    [58-61] İvme X               (UKB[28-31])
-    [62-65] İvme Y               (UKB[32-35])
-    [66-69] İvme Z               (UKB[36-39])
-    [70-73] Açı                  (UKB[40-43])
-    [74]    Durum - UINT8
-    [75]    Checksum (Byte 4-74 toplamının mod 256)
-    [76-77] Footer: 0D 0A
+    [4-7]   Roket İrtifa      - float32
+    [8-11]  Roket GPS İrtifa  - float32
+    [12-15] Roket Enlem        - float32
+    [16-19] Roket Boylam       - float32
+    [20-23] Jiroskop X         - float32
+    [24-27] Jiroskop Y         - float32
+    [28-31] Jiroskop Z         - float32
+    [32-35] İvme X             - float32
+    [36-39] İvme Y             - float32
+    [40-43] İvme Z             - float32
+    [44-47] Roket Açı          - float32
+    [48]    Roket Durum        - uint8
+    [49]    UKB Sayaçı         - uint8
+    [50-53] GY Basınç (Pa)    - float32
+    [54-57] GY GPS İrtifa      - float32
+    [58-61] GY Enlem           - float32
+    [62-65] GY Boylam          - float32
+    [66-69] GY Sıcaklık (°C)  - float32
+    [70]    GY Nem (%)         - uint8
+    [71]    GY Sayaçı          - uint8
+    [72]    Checksum           - uint8  (sum(byte[4..71]) % 256)
+    [73-74] Footer: 0D 0A
 
     Returns:
-        bytes: 78 byte uzunluğunda binary paket
+        bytes: 75 byte uzunluğunda binary paket
     """
-    packet = bytearray(78)
+    packet = bytearray(75)
 
     # Header [0-3]
     packet[0] = 0xFF
@@ -102,64 +110,77 @@ def create_binary_packet(nem_yuzde, counter, irtifa,
     packet[2] = 0x54
     packet[3] = 0x52
 
-    # Nem [4] - Byte 4: TAKIM ID yerine nem yazılıyor (main.c L150)
-    packet[4] = int(nem_yuzde) & 0xFF
+    # --- UKB Verileri ---
 
-    # Sayaç [5]
-    packet[5] = counter & 0xFF
+    # Roket İrtifa [4-7]
+    struct.pack_into('<f', packet, 4, float(irtifa))
 
-    # İrtifa [6-9]
-    struct.pack_into('<f', packet, 6, float(irtifa))
+    # Roket GPS İrtifa [8-11]
+    struct.pack_into('<f', packet, 8, float(roket_gps_irtifa))
 
-    # Roket GPS İrtifa [10-13]
-    struct.pack_into('<f', packet, 10, float(roket_gps_irtifa))
-    # Roket Enlem [14-17]
-    struct.pack_into('<f', packet, 14, float(roket_enlem))
-    # Roket Boylam [18-21]
-    struct.pack_into('<f', packet, 18, float(roket_boylam))
+    # Roket Enlem [12-15]
+    struct.pack_into('<f', packet, 12, float(roket_enlem))
 
-    # GY GPS İrtifa [22-25]
-    struct.pack_into('<f', packet, 22, float(gorev_gps_irtifa))
-    # GY GPS Enlem [26-29]
-    struct.pack_into('<f', packet, 26, float(gorev_enlem))
-    # GY GPS Boylam [30-33]
-    struct.pack_into('<f', packet, 30, float(gorev_boylam))
+    # Roket Boylam [16-19]
+    struct.pack_into('<f', packet, 16, float(roket_boylam))
 
-    # GY BME280 Basınç (Pa) [34-37] - main.c L134-135: "kademe irtifaya yaziliyor"
-    struct.pack_into('<f', packet, 34, float(gorev_basinc_pa))
+    # Jiroskop X [20-23]
+    struct.pack_into('<f', packet, 20, float(jiroskop_x))
 
-    # GY Sıcaklık (°C) [38-41] - main.c L146-147: "kademe enleme yaziliyor"
-    struct.pack_into('<f', packet, 38, float(gorev_sicaklik_c))
+    # Jiroskop Y [24-27]
+    struct.pack_into('<f', packet, 24, float(jiroskop_y))
 
-    # [42-45] Boş - main.c'de bu slota hiçbir şey yazılmıyor (sıfır kalır)
+    # Jiroskop Z [28-31]
+    struct.pack_into('<f', packet, 28, float(jiroskop_z))
 
-    # Jiroskop X [46-49]
-    struct.pack_into('<f', packet, 46, float(jiroskop_x))
-    # Jiroskop Y [50-53]
-    struct.pack_into('<f', packet, 50, float(jiroskop_y))
-    # Jiroskop Z [54-57]
-    struct.pack_into('<f', packet, 54, float(jiroskop_z))
+    # İvme X [32-35]
+    struct.pack_into('<f', packet, 32, float(ivme_x))
 
-    # İvme X [58-61]
-    struct.pack_into('<f', packet, 58, float(ivme_x))
-    # İvme Y [62-65]
-    struct.pack_into('<f', packet, 62, float(ivme_y))
-    # İvme Z [66-69]
-    struct.pack_into('<f', packet, 66, float(ivme_z))
+    # İvme Y [36-39]
+    struct.pack_into('<f', packet, 36, float(ivme_y))
 
-    # Açı [70-73]
-    struct.pack_into('<f', packet, 70, float(aci))
+    # İvme Z [40-43]
+    struct.pack_into('<f', packet, 40, float(ivme_z))
 
-    # Durum [74]
-    packet[74] = durum & 0xFF
+    # Roket Açı [44-47]
+    struct.pack_into('<f', packet, 44, float(aci))
 
-    # Checksum [75] — Byte 4'ten 74'e (dahil) toplamın mod 256'sı
-    checksum = sum(packet[4:75]) % 256
-    packet[75] = checksum
+    # Roket Durum [48]
+    packet[48] = durum & 0xFF
 
-    # Footer [76-77]
-    packet[76] = 0x0D
-    packet[77] = 0x0A
+    # UKB Sayaçı [49]
+    packet[49] = ukb_sayac & 0xFF
+
+    # --- Görev Yükü Verileri ---
+
+    # GY Basınç (Pa) [50-53]
+    struct.pack_into('<f', packet, 50, float(gorev_basinc_pa))
+
+    # GY GPS İrtifa [54-57]
+    struct.pack_into('<f', packet, 54, float(gorev_gps_irtifa))
+
+    # GY Enlem [58-61]
+    struct.pack_into('<f', packet, 58, float(gorev_enlem))
+
+    # GY Boylam [62-65]
+    struct.pack_into('<f', packet, 62, float(gorev_boylam))
+
+    # GY Sıcaklık (°C) [66-69]
+    struct.pack_into('<f', packet, 66, float(gorev_sicaklik_c))
+
+    # GY Nem (%) [70]
+    packet[70] = int(nem_yuzde) & 0xFF
+
+    # GY Sayaçı [71]
+    packet[71] = gorev_sayac & 0xFF
+
+    # Checksum [72] — sum(byte[4..71]) % 256
+    checksum = sum(packet[4:72]) % 256
+    packet[72] = checksum
+
+    # Footer [73-74]
+    packet[73] = 0x0D
+    packet[74] = 0x0A
 
     return bytes(packet)
 
@@ -176,29 +197,37 @@ try:
     while True:
         paket_sayac += 1
         packet_counter = (packet_counter + 1) % 256
-
-        # --- Uçuş Durumu Simülasyonu ---
-        if paket_sayac < 50:
-            durum = 0  # Beklemede
-            irtifa += random.uniform(0, 0.5)
-        elif paket_sayac < 200:
-            durum = 1  # Yükseliyor
-            irtifa += random.uniform(10.0, 20.0)
+        gorev_packet_counter = (gorev_packet_counter + 1) % 256
+        # --- Uçuş Durumu Simülasyonu (roket_durum_t) ---
+        if paket_sayac < 40:
+            durum = 0  # 0: DURUM_UCUSA_HAZIRLIK
+            irtifa += random.uniform(0, 0.2)
+        elif paket_sayac < 160:
+            durum = 1  # 1: DURUM_UCUS
+            irtifa += random.uniform(15.0, 25.0)
             ivme_z = random.uniform(15.0, 25.0)
-        elif paket_sayac < 220:
-            durum = 2  # Tepe noktası
-            irtifa += random.uniform(-2.0, 2.0)
-            ivme_z = random.uniform(-2.0, 2.0)
-        else:
-            durum = 3  # İniş
+        elif paket_sayac < 180:
+            durum = 2  # 2: DURUM_APOGEE
+            irtifa += random.uniform(-1.0, 1.0)
+            ivme_z = random.uniform(-1.0, 1.0)
+        elif paket_sayac < 200:
+            durum = 3  # 3: DURUM_BIRINCI_AYRILMA
             irtifa -= random.uniform(5.0, 10.0)
+            ivme_z = random.uniform(-3.0, -1.0)
+        elif paket_sayac < 220:
+            durum = 4  # 4: DURUM_IKINCI_AYRILMA
+            irtifa -= random.uniform(8.0, 12.0)
+            ivme_z = random.uniform(-4.0, -2.0)
+        else:
+            durum = 5  # 5: DURUM_INIS
+            irtifa -= random.uniform(10.0, 15.0)
             ivme_z = random.uniform(-5.0, -2.0)
 
         if irtifa < 0:
             irtifa = 0
 
-        # Yere inince sıfırla
-        if irtifa == 0 and durum == 3:
+        # Yere inince (İniş durumundayken irtifa 0 olunca) sıfırla
+        if irtifa == 0 and durum == 5:
             print("--- Roket yere indi, simülasyon 2 saniye içinde yeniden başlayacak ---")
             time.sleep(2)
             paket_sayac = 0
@@ -245,20 +274,21 @@ try:
 
         # Binary paket oluştur
         binary_packet = create_binary_packet(
-            nem, packet_counter,
+            packet_counter, gorev_packet_counter,
             irtifa,
             roket_gps_irtifa, roket_enlem, roket_boylam,
-            gorev_gps_irtifa, gorev_enlem, gorev_boylam,
-            gorev_basinc, gorev_sicaklik,
             jiroskop_x, jiroskop_y, jiroskop_z,
             ivme_x, ivme_y, ivme_z,
-            aci, durum
+            aci, durum,
+            gorev_basinc, gorev_gps_irtifa,
+            gorev_enlem, gorev_boylam, gorev_sicaklik,
+            nem
         )
 
         ser.write(binary_packet)
 
-        checksum = binary_packet[75]
-        print(f"Gönderildi: #{packet_counter} (Sim:{paket_sayac}) | İrtifa: {irtifa:.1f}m | "
+        checksum = binary_packet[72]
+        print(f"Gönderildi: UKB#{packet_counter} GY#{gorev_packet_counter} (Sim:{paket_sayac}) | İrtifa: {irtifa:.1f}m | "
               f"Basınç: {gorev_basinc:.0f}Pa | Sıcaklık: {gorev_sicaklik:.1f}°C | "
               f"Nem: %{nem} | Durum: {durum} | CS: {checksum}")
 
