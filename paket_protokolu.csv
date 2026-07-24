@@ -1,0 +1,24 @@
+Byte Aralığı;Boyut (Byte);Veri Tipi;Veri Adı;Birim;Açıklama
+0-3;4;uint8[4];Header;-;Sabit Başlık Bilgisi (0xFF 0xFF 0x54 0x52 / ASCII "TR")
+4-7;4;float32;Roket İrtifa;m;Roket Ana Kart (UKB) Barometrik İrtifa
+8-11;4;float32;Roket GPS İrtifa;m;Roket GPS İrtifa Verisi
+12-15;4;float32;Roket GPS Enlem;deg;Roket GPS Enlem Koordinatı
+16-19;4;float32;Roket GPS Boylam;deg;Roket GPS Boylam Koordinatı
+20-23;4;float32;Jiroskop X;°/s;Roket Jiroskop X Ekseni Açısal Hızı
+24-27;4;float32;Jiroskop Y;°/s;Roket Jiroskop Y Ekseni Açısal Hızı
+28-31;4;float32;Jiroskop Z;°/s;Roket Jiroskop Z Ekseni Açısal Hızı
+32-35;4;float32;İvme X;G;Roket İvmeölçer X Ekseni
+36-39;4;float32;İvme Y;G;Roket İvmeölçer Y Ekseni
+40-43;4;float32;İvme Z;G;Roket İvmeölçer Z Ekseni
+44-47;4;float32;Roket Açı;deg;Roket Yönelme / Eğim Açısı
+48;1;uint8;Roket Durum;-;0:Uçuşa Hazırlık, 1:Uçuş, 2:Apogee, 3:1.Ayrılma, 4:2.Ayrılma, 5:İniş
+49;1;uint8;UKB Sayaçı;-;0-255 Arası Döngüsel UKB Paket Sayacı
+50-53;4;float32;GY Basınç;Pa;Görev Yükü Barometrik Basınç (BME280)
+54-57;4;float32;GY GPS İrtifa;m;Görev Yükü GPS İrtifa Verisi
+58-61;4;float32;GY GPS Enlem;deg;Görev Yükü GPS Enlem Koordinatı
+62-65;4;float32;GY GPS Boylam;deg;Görev Yükü GPS Boylam Koordinatı
+66-69;4;float32;GY Sıcaklık;°C;Görev Yükü Sıcaklık Verisi
+70;1;uint8;GY Nem;%;Görev Yükü Bağıl Nem Yüzdesi
+71;1;uint8;GY Sayaçı;-;0-255 Arası Döngüsel Görev Yükü Paket Sayacı
+72;1;uint8;Checksum;-;Modulo 256 Kontrol Toplamı: sum(byte[4..71]) % 256
+73-74;2;uint8[2];Footer;-;Sabit Bitiş Bilgisi (0x0D 0x0A / CRLF \r\n)
