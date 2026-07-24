@@ -54,13 +54,57 @@ class PortInfoWidget(QWidget):
         refresh_button.setStyleSheet(self._get_refresh_button_style())
         refresh_button.clicked.connect(self._refresh_ports)
         
+        # Checksum / CRC durum etiketi (Arayüzde boş duran sağ alanda gösterilir)
+        self.checksum_status_label = QLabel("CRC: Bekleniyor...")
+        self.checksum_status_label.setStyleSheet("""
+            QLabel {
+                color: #a0a0a0;
+                font-size: 11px;
+                font-weight: bold;
+                background-color: #2b2b2b;
+                padding: 6px 10px;
+                border-radius: 4px;
+                border: 1px solid #3d3d3d;
+            }
+        """)
+        
         # Layout'a ekle
         layout.addWidget(receiver_label)
         layout.addWidget(self.receiver_port_combo, 1)  # ComboBox genişleyebilir
         layout.addWidget(transmitter_label)
         layout.addWidget(self.transmitter_port_combo, 1)  # ComboBox genişleyebilir
         layout.addWidget(refresh_button)
+        layout.addWidget(self.checksum_status_label)
         layout.addStretch()
+    
+    def update_checksum_status(self, has_error: bool, calculated: int, received: int):
+        """CRC/Checksum durumunu arayüzdeki etikete yansıtır."""
+        if has_error:
+            self.checksum_status_label.setText(f"⚠️ CRC Uyuşmazlığı (Hesaplanan: {calculated} | Alınan: {received})")
+            self.checksum_status_label.setStyleSheet("""
+                QLabel {
+                    color: #ffaa00;
+                    font-size: 11px;
+                    font-weight: bold;
+                    background-color: #3a2e00;
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                    border: 1px solid #ffaa00;
+                }
+            """)
+        else:
+            self.checksum_status_label.setText(f"✅ CRC OK ({received})")
+            self.checksum_status_label.setStyleSheet("""
+                QLabel {
+                    color: #00ff88;
+                    font-size: 11px;
+                    font-weight: bold;
+                    background-color: #002e18;
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                    border: 1px solid #00ff88;
+                }
+            """)
     
     def _get_combo_style(self):
         """ComboBox için stil döndürür."""

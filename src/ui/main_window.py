@@ -267,7 +267,14 @@ class MainWindow(QMainWindow):
         telemetry = DataParser.parse(raw_data)
         
         if telemetry is None:
-            return  # Parse hatası
+            return  # Parse hatası (Header / Footer / Boyut)
+        
+        # Checksum durumunu üst panelde göster
+        self.port_info_widget.update_checksum_status(
+            telemetry.checksum_error, 
+            telemetry.checksum_calculated, 
+            telemetry.checksum
+        )
         
         # Parse edilmiş veriyi log widget'a ekle (binary hex yerine parse edilmiş veri)
         self.data_log_widget.add_log(telemetry)

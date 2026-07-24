@@ -3,6 +3,7 @@
 # Binary protokol formatında (75 byte) veri okur
 
 import serial
+import time
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
@@ -50,6 +51,8 @@ class SerialWorker(QObject):
                     
                     # Buffer'dan paketleri çıkar
                     self._extract_packets()
+                else:
+                    time.sleep(0.002)  # CPU kilitlenmesini ve seri sürücü taşmasını önle
                 
             except serial.SerialException as e:
                 # Cihaz çıkarılırsa vb.

@@ -89,6 +89,8 @@ class TelemetryData:
 
         # Checksum
         self.checksum: int = 0
+        self.checksum_error: bool = False
+        self.checksum_calculated: int = 0
 
     # --- Formatlama Metotları ---
 
@@ -261,9 +263,9 @@ class DataParser:
             # Checksum kontrolü — sum(byte[4..71]) % 256
             calculated_checksum = sum(raw_data[DataParser.CHECKSUM_START:DataParser.CHECKSUM_END]) % 256
             received_checksum = raw_data[72]
-            if calculated_checksum != received_checksum:
-                print(f"Parse hatası: Checksum uyuşmazlığı. Hesaplanan: {calculated_checksum}, Alınan: {received_checksum}")
-                return None
+            checksum_has_error = (calculated_checksum != received_checksum)
+            if checksum_has_error:
+                print(f"[UYARI] Checksum Uyusmazligi! Hesaplanan: {calculated_checksum}, Alinan: {received_checksum} (Paket kabul edildi)")
 
             data = TelemetryData()
 
@@ -334,6 +336,8 @@ class DataParser:
 
             # Checksum [72]
             data.checksum = received_checksum
+            data.checksum_error = checksum_has_error
+            data.checksum_calculated = calculated_checksum
 
             # --- Türetilmiş Hesaplamalar ---
 

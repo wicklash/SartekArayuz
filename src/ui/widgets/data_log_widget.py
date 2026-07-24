@@ -58,10 +58,11 @@ class DataLogWidget(QWidget):
         """
         if isinstance(data, TelemetryData):
             # Parse edilmiş telemetri verisi - okunabilir format
+            cs_str = f"⚠️ CS Uyuşmazlığı (Hes:{data.checksum_calculated} | Al:{data.checksum})" if getattr(data, 'checksum_error', False) else f"Checksum: {data.checksum}"
             log_line = (f"[UKB:#{data.sayac} | GY:#{data.gorev_sayac}] Durum: {data.durum_text} | "
                        f"İrtifa: {data.get_formatted_irtifa()} | "
                        f"Roket GPS: {data.get_formatted_gps_irtifa(data.roket_gps_irtifa)} | "
-                       f"Checksum: {data.checksum}")
+                       f"{cs_str}")
             self.log_text.append(log_line)
         elif isinstance(data, bytes):
             # Binary veriyi hex formatında göster (fallback)
